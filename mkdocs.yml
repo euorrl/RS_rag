@@ -1,0 +1,11 @@
+site_name: RS RAG Docs
+site_description: 遥感考研助手 RAG 项目文档
+site_author: Hu Peng
+
+theme:
+  name: material
+  language: zh
+
+nav:
+  - 首页: index.md
+  - Reader 模块: reader.md
