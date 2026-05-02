@@ -1,9 +1,13 @@
-# Python
+# Python 缓存
 __pycache__/
 *.pyc
 
 # 虚拟环境
 .venv/
 
-# IDE
-.vscode/
+# pytest
+.pytest_cache/
+
+# coverage
+.coverage
+htmlcov/
