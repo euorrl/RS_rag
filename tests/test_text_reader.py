@@ -6,7 +6,6 @@ from app.reader import TextReader
 from app.reader.text_reader import _read_text_safe
 from app.schemas import Document
 
-
 pytestmark = pytest.mark.reader
 
 

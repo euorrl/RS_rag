@@ -2,7 +2,6 @@ import pytest
 
 from app.reader import BaseReader
 
-
 pytestmark = pytest.mark.reader
 
 
