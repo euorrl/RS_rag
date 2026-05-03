@@ -1,12 +1,13 @@
 import pytest
 
+from app.reader import BaseReader
 from app.reader import MinerUImageReader
 from app.schemas import Document
 
 pytestmark = pytest.mark.reader
 
 
-class MockMinerUClient:
+class MockMinerUClient(BaseReader):
     """模拟 MinerUClient。"""
 
     def parse_file(
