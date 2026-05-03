@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.reader.base import BaseReader
+from app.reader import BaseReader
 from app.schemas import Document
 
 

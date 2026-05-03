@@ -1,18 +1,37 @@
-from app.reader.markdown_reader import MarkdownReader
+from app.reader import load_document
 
 
-def test_markdown_reader():
-    """手动验证 MarkdownReader 读取复杂 Markdown 文件。"""
-    reader = MarkdownReader()
-    doc = reader.read("data/test_markdown.md")
+def test_file(file_path: str):
+    """测试单个文件"""
+    print("\n" + "=" * 50)
+    print(f"Testing: {file_path}")
 
-    print("=== Markdown Reader ===")
-    print(doc.file_name)
-    print(doc.file_type)
-    print(doc.metadata)
-    print()
-    print(doc.text[:])
+    try:
+        doc = load_document(file_path)
+
+        print("File:", doc.file_name)
+        print("Type:", doc.file_type)
+        print("Metadata:", doc.metadata)
+        print("text:")
+        print(doc.text)
+
+    except Exception as e:
+        print("❌ Error:", str(e))
+
+
+def main():
+    """测试所有文件类型"""
+
+    files = [
+        "data/test_txt.txt",  # txt
+        "data/test_markdown.md",  # markdown
+        "data/test.png",  # image (OCR)
+        "data/遥感导论-目录-11-16.pdf",  # pdf
+    ]
+
+    for file in files:
+        test_file(file)
 
 
 if __name__ == "__main__":
-    test_markdown_reader()
+    main()
