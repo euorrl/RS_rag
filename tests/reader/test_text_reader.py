@@ -31,35 +31,10 @@ def test_text_reader_reads_txt_file(tmp_path):
     assert doc.text == content
     assert "遥感考研助手" in doc.text
     assert doc.metadata["reader"] == "TextReader"
-    assert doc.metadata["source_type"] == "text"
-    assert doc.metadata["extra"]["line_count"] == 2
+    assert doc.metadata["source_format"] == "txt"
+    assert doc.metadata["text_format"] == "markdown"
+    assert doc.metadata["char_count"] == 27
     assert doc.document_id is not None
-
-
-def test_text_reader_metadata_contains_source_info(tmp_path):
-    """验证 metadata 中的 source 与 extra 信息正确。
-
-    Args:
-        tmp_path (pathlib.Path): pytest 提供的临时目录。
-
-    Returns:
-        None
-    """
-    file_path = tmp_path / "test.txt"
-    content = "test content"
-    file_path.write_text(content, encoding="utf-8")
-
-    reader = TextReader()
-    doc = reader.read(file_path)
-
-    source = doc.metadata["source"]
-    extra = doc.metadata["extra"]
-
-    assert source["path"] == str(file_path)
-    assert source["file_name"] == "test.txt"
-    assert source["file_type"] == ".txt"
-    assert extra["char_count"] == len(content)
-    assert extra["line_count"] == 1
 
 
 def test_text_reader_reads_empty_file(tmp_path):
@@ -77,9 +52,14 @@ def test_text_reader_reads_empty_file(tmp_path):
     reader = TextReader()
     doc = reader.read(file_path)
 
+    assert doc.file_name == "empty.txt"
+    assert doc.file_type == ".txt"
     assert doc.text == ""
-    assert doc.metadata["extra"]["char_count"] == 0
-    assert doc.metadata["extra"]["line_count"] == 1
+    assert doc.metadata["reader"] == "TextReader"
+    assert doc.metadata["source_format"] == "txt"
+    assert doc.metadata["text_format"] == "markdown"
+    assert doc.metadata["char_count"] == 0
+    assert doc.document_id is not None
 
 
 def test_text_reader_raises_error_when_file_not_found():

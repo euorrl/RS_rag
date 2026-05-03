@@ -1,9 +1,11 @@
 from app.reader.base import BaseReader
-from app.reader.mineru_reader import MinerUReader
 from app.reader.text_reader import TextReader
+from app.reader.mineru_pdf_reader import MinerUPdfReader
+from app.reader.mineru_image_reader import MinerUImageReader
 
 __all__ = [
     "BaseReader",
-    "MinerUReader",
     "TextReader",
+    "MinerUPdfReader",
+    "MinerUImageReader",
 ]

@@ -1,17 +1,16 @@
-from pathlib import Path
-from app.reader import TextReader
+from app.reader.mineru_image_reader import MinerUImageReader
 
 
-def main() -> None:
-    reader = TextReader()
-    doc = reader.read(Path("test.txt"))
+def test_image_reader():
+    reader = MinerUImageReader()
+    doc = reader.read("data/test.png")
 
-    print("document_id:", doc.document_id)
-    print("file_name:", doc.file_name)
-    print("file_type:", doc.file_type)
-    print("text:", doc.text)
-    print("metadata:", doc.metadata)
+    print("=== Image Reader ===")
+    print(doc.file_name)
+    print(doc.file_type)
+    print(doc.metadata)
+    print(doc.text[:1000])
 
 
 if __name__ == "__main__":
-    main()
+    test_image_reader()

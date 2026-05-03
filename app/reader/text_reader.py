@@ -50,24 +50,15 @@ class TextReader(BaseReader):
 
         text = _read_text_safe(path)
 
-        metadata = {
-            "reader": "TextReader",
-            "source_type": "text",
-            "source": {
-                "path": str(path),
-                "file_name": path.name,
-                "file_type": path.suffix.lower(),
-            },
-            "extra": {
-                "char_count": len(text),
-                "line_count": text.count("\n") + 1,
-            },
-        }
-
         return Document(
             source_path=str(path),
             file_name=path.name,
             file_type=path.suffix.lower(),
             text=text,
-            metadata=metadata,
+            metadata={
+                "reader": "TextReader",
+                "source_format": "txt",
+                "text_format": "markdown",
+                "char_count": len(text),
+            },
         )
