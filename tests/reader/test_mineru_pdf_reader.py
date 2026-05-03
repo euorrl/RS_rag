@@ -1,6 +1,6 @@
 import pytest
 
-from app.reader import BaseReader
+from app.reader.base import BaseReader
 from app.reader import MinerUPdfReader
 from app.schemas import Document
 
