@@ -5,6 +5,10 @@ mkdocs-material
 pytest
 pytest-cov
 
-# dev tools（可选）
+# dev tools
 black
 flake8
+
+# runtime
+requests
+python-dotenv
