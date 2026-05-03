@@ -1,6 +1,6 @@
 import pytest
 
-from app.reader.mineru_pdf_reader import MinerUPdfReader
+from app.reader import MinerUPdfReader
 from app.schemas import Document
 
 pytestmark = pytest.mark.reader

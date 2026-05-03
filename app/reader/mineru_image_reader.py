@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.reader import BaseReader
+from app.reader.base import BaseReader
 from app.reader.mineru_client import MinerUClient
 from app.schemas import Document
 
@@ -13,28 +13,24 @@ class MinerUImageReader(BaseReader):
 
         Args:
             client (MinerUClient | None): MinerU API 客户端。
-                如果未提供，则默认创建一个 MinerUClient。
+                如果未提供，则在真正读取文件时再创建 MinerUClient。
         """
-        self.client = client or MinerUClient()
+        self.client = client
+
+    def _get_client(self) -> MinerUClient:
+        """延迟创建 MinerUClient。"""
+        if self.client is None:
+            self.client = MinerUClient()
+        return self.client
 
     def read(self, file_path: str | Path) -> Document:
-        """读取图片文件，并返回标准 Document 对象。
-
-        Args:
-            file_path (str | Path): 本地图片文件路径。
-
-        Returns:
-            Document: 包含 Markdown 文本的标准文档对象。
-
-        Raises:
-            FileNotFoundError: 当文件不存在时抛出。
-        """
+        """读取图片文件，并返回标准 Document 对象。"""
         path = Path(file_path)
 
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
 
-        text = self.client.parse_file(
+        text = self._get_client().parse_file(
             path,
             language="ch",
             model_version="vlm",

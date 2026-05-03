@@ -1,6 +1,6 @@
 import pytest
 
-from app.reader.mineru_image_reader import MinerUImageReader
+from app.reader import MinerUImageReader
 from app.schemas import Document
 
 pytestmark = pytest.mark.reader
