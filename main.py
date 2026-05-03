@@ -1,16 +1,18 @@
-from app.reader.mineru_image_reader import MinerUImageReader
+from app.reader.markdown_reader import MarkdownReader
 
 
-def test_image_reader():
-    reader = MinerUImageReader()
-    doc = reader.read("data/test.png")
+def test_markdown_reader():
+    """手动验证 MarkdownReader 读取复杂 Markdown 文件。"""
+    reader = MarkdownReader()
+    doc = reader.read("data/test_markdown.md")
 
-    print("=== Image Reader ===")
+    print("=== Markdown Reader ===")
     print(doc.file_name)
     print(doc.file_type)
     print(doc.metadata)
-    print(doc.text[:1000])
+    print()
+    print(doc.text[:])
 
 
 if __name__ == "__main__":
-    test_image_reader()
+    test_markdown_reader()
