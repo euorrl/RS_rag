@@ -12,3 +12,4 @@ flake8
 # runtime
 requests
 python-dotenv
+langchain-text-splitters

@@ -25,10 +25,7 @@ def _read_text_safe(path: Path) -> str:
 
 
 class TextReader(BaseReader):
-    """纯文本 Reader。
-
-    支持 .txt、.md 等文本文件读取，并转换为 Document。
-    """
+    """txt 文件读取器（支持 .txt）。"""
 
     def read(self, file_path: str | Path) -> Document:
         """读取文本文件并返回 Document。
