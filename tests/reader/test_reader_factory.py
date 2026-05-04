@@ -8,7 +8,7 @@ from app.reader import (
     MinerUPdfReader,
     TextReader,
 )
-from app.reader.factory import get_reader, load_document
+from app.reader.reader_factory import get_reader, load_document
 
 pytestmark = pytest.mark.reader
 
