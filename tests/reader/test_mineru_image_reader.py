@@ -78,3 +78,35 @@ def test_mineru_image_reader_raises_error_when_file_not_found():
 
     with pytest.raises(FileNotFoundError):
         reader.read("not_exist.png")
+
+
+def test_mineru_image_reader_creates_client_when_client_is_none(tmp_path, monkeypatch):
+    """验证未传入 client 时，Reader 会延迟创建 MinerUClient。
+
+    Args:
+        tmp_path (pathlib.Path): pytest 提供的临时目录。
+        monkeypatch (pytest.MonkeyPatch): pytest 提供的 monkeypatch 工具。
+
+    Returns:
+        None
+    """
+    file_path = tmp_path / "test.png"
+    file_path.write_bytes(b"fake image content")
+
+    monkeypatch.setattr(
+        "app.reader.mineru_image_reader.MinerUClient",
+        MockMinerUClient,
+    )
+
+    reader = MinerUImageReader()
+    doc = reader.read(file_path)
+
+    assert isinstance(doc, Document)
+    assert doc.file_name == "test.png"
+    assert doc.file_type == ".png"
+    assert doc.text == "# 图片测试文档\n\n图像文字识别结果"
+    assert doc.metadata["reader"] == "MinerUImageReader"
+    assert doc.metadata["source_format"] == "image"
+    assert doc.metadata["text_format"] == "markdown"
+    assert doc.metadata["char_count"] == len(doc.text)
+    assert doc.document_id is not None

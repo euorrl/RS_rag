@@ -78,3 +78,35 @@ def test_mineru_pdf_reader_raises_error_when_file_not_found():
 
     with pytest.raises(FileNotFoundError):
         reader.read("not_exist.pdf")
+
+
+def test_mineru_pdf_reader_creates_client_when_client_is_none(tmp_path, monkeypatch):
+    """验证未传入 client 时，Reader 会延迟创建 MinerUClient。
+
+    Args:
+        tmp_path (pathlib.Path): pytest 提供的临时目录。
+        monkeypatch (pytest.MonkeyPatch): pytest 提供的 monkeypatch 工具。
+
+    Returns:
+        None
+    """
+    file_path = tmp_path / "test.pdf"
+    file_path.write_bytes(b"%PDF-1.4 fake pdf content")
+
+    monkeypatch.setattr(
+        "app.reader.mineru_pdf_reader.MinerUClient",
+        MockMinerUClient,
+    )
+
+    reader = MinerUPdfReader()
+    doc = reader.read(file_path)
+
+    assert isinstance(doc, Document)
+    assert doc.file_name == "test.pdf"
+    assert doc.file_type == ".pdf"
+    assert doc.text == "# PDF 测试文档\n\nNDVI = test"
+    assert doc.metadata["reader"] == "MinerUPdfReader"
+    assert doc.metadata["source_format"] == "pdf"
+    assert doc.metadata["text_format"] == "markdown"
+    assert doc.metadata["char_count"] == len(doc.text)
+    assert doc.document_id is not None
