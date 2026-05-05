@@ -13,3 +13,19 @@ flake8
 requests
 python-dotenv
 langchain-text-splitters
+mkdocs
+mkdocs-material
+
+# testing
+pytest
+pytest-cov
+
+# dev tools
+black
+flake8
+
+# runtime
+requests
+python-dotenv
+langchain-text-splitters
+sentence-transformers
