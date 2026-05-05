@@ -1,5 +1,19 @@
 from app.schemas import Document, Chunk
+from app.chunker.chunker_base import BaseChunker
 from app.chunker.markdown_chunker import MarkdownChunker
+
+
+def get_chunker(document: Document, **kwargs) -> BaseChunker:
+    """根据 document 选择 chunker（未来扩展点）"""
+    if not isinstance(document, Document):
+        raise TypeError("document 必须是 app.schemas.Document 类型")
+
+    text_format = document.metadata.get("text_format")
+
+    if text_format == "markdown":
+        return MarkdownChunker(**kwargs)
+
+    raise ValueError(f"Unsupported text format: {text_format}")
 
 
 def chunk_document(document: Document, **kwargs) -> list[Chunk]:
@@ -31,5 +45,5 @@ def chunk_document(document: Document, **kwargs) -> list[Chunk]:
         TypeError: 当 document 类型不正确或 document.text 不是字符串时抛出。
         RuntimeError: 当底层切分过程（LangChain）发生异常时抛出。
     """
-    chunker = MarkdownChunker(**kwargs)
+    chunker = get_chunker(document, **kwargs)
     return chunker.chunk(document)

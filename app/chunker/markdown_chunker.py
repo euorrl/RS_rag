@@ -1,3 +1,4 @@
+from app.chunker.chunker_base import BaseChunker
 from app.schemas import Chunk, Document
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
@@ -5,7 +6,7 @@ from langchain_text_splitters import (
 )
 
 
-class MarkdownChunker:
+class MarkdownChunker(BaseChunker):
     """Markdown 文档切分器。
 
     该组件用于将 Markdown 文档切分为适用于向量检索的 Chunk 列表。

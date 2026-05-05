@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.reader.base import BaseReader
+from app.reader.reader_base import BaseReader
 from app.reader.mineru_client import MinerUClient
 from app.schemas import Document
 

@@ -1,14 +1,16 @@
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from app.schemas import Document
 
 
-class BaseReader:
+class BaseReader(ABC):
     """Reader 抽象基类。
 
-    所有具体 Reader 都应继承该类，并实现 read 方法。
+    所有具体 Reader 都必须实现 read 方法。
     """
 
+    @abstractmethod
     def read(self, file_path: str | Path) -> Document:
         """读取文件并返回标准化的 Document 对象。
 
@@ -17,8 +19,5 @@ class BaseReader:
 
         Returns:
             Document: 解析后的文档对象。
-
-        Raises:
-            NotImplementedError: 子类未实现该方法时抛出。
         """
-        raise NotImplementedError
+        pass  # pragma: no cover

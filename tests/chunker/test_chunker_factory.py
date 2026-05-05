@@ -52,3 +52,12 @@ def test_chunk_document_raises_error_for_invalid_input():
     """验证 chunk_document 会透传底层输入类型异常。"""
     with pytest.raises(TypeError, match="document 必须是 app.schemas.Document 类型"):
         chunk_document("not a document")
+
+
+def test_chunk_document_unsupported_format():
+    """验证不支持的 text_format 会报错。"""
+    document = make_document("text")
+    document.metadata["text_format"] = "unknown"
+
+    with pytest.raises(ValueError, match="Unsupported text format"):
+        chunk_document(document)
