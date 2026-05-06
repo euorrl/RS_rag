@@ -1,3 +1,6 @@
+from numbers import Real
+from typing import Any
+
 from pymilvus import (
     Collection,
     CollectionSchema,
@@ -7,11 +10,18 @@ from pymilvus import (
     utility,
 )
 
+from app.schemas import EmbeddedChunk, RetrievedChunk
 from app.vector_store.vector_store_base import BaseVectorStore
 
 
 class MilvusVectorStore(BaseVectorStore):
-    """基于 Milvus 的向量数据库实现。"""
+    """基于 Milvus 的向量数据库实现。
+
+    该类负责把已经向量化的 ``EmbeddedChunk`` 写入 Milvus，并基于查询向量
+    返回最相似的文本块。它只处理向量库读写，不负责文本切分或 embedding 生成。
+    """
+
+    output_fields = ["chunk_id", "document_id", "text", "metadata"]
 
     def __init__(
         self,
@@ -20,6 +30,20 @@ class MilvusVectorStore(BaseVectorStore):
         port: str = "19530",
         dimension: int = 512,
     ) -> None:
+        """初始化 MilvusVectorStore 并建立 Milvus 连接。
+
+        Args:
+            collection_name: Milvus collection 名称。
+            host: Milvus 服务地址。
+            port: Milvus 服务端口。
+            dimension: 向量维度，必须与 embedding 模型输出维度一致。
+
+        Raises:
+            ValueError: 当 dimension 不合法时抛出。
+        """
+        if dimension <= 0:
+            raise ValueError("dimension 必须大于 0")
+
         self.collection_name = collection_name
         self.host = host
         self.port = port
@@ -32,8 +56,7 @@ class MilvusVectorStore(BaseVectorStore):
         )
 
     def create_collection(self) -> None:
-        """创建 Milvus collection。"""
-
+        """创建 Milvus collection 和向量索引。"""
         if utility.has_collection(self.collection_name):
             return
 
@@ -90,4 +113,136 @@ class MilvusVectorStore(BaseVectorStore):
                     "efConstruction": 64,
                 },
             },
+        )
+
+    def insert(self, embedded_chunks: list[EmbeddedChunk]) -> None:
+        """插入已经向量化的文本块。
+
+        Args:
+            embedded_chunks: 待写入 Milvus 的 EmbeddedChunk 列表。
+
+        Raises:
+            TypeError: 当输入不是 list[EmbeddedChunk] 时抛出。
+            ValueError: 当 embedding 维度与 collection 维度不一致时抛出。
+        """
+        if not isinstance(embedded_chunks, list):
+            raise TypeError("embedded_chunks 必须是 list[EmbeddedChunk] 类型")
+
+        if not all(isinstance(chunk, EmbeddedChunk) for chunk in embedded_chunks):
+            raise TypeError("embedded_chunks 中的元素必须全部是 EmbeddedChunk 类型")
+
+        if not embedded_chunks:
+            return
+
+        for chunk in embedded_chunks:
+            self._validate_vector(chunk.embedding, vector_name="embedding")
+
+        self.create_collection()
+        collection = self._get_collection()
+
+        data = [
+            [chunk.chunk_id for chunk in embedded_chunks],
+            [chunk.document_id or "" for chunk in embedded_chunks],
+            [chunk.text for chunk in embedded_chunks],
+            [chunk.embedding for chunk in embedded_chunks],
+            [chunk.metadata for chunk in embedded_chunks],
+        ]
+
+        collection.insert(data)
+        collection.flush()
+
+    def search(
+        self,
+        query_vector: list[float],
+        top_k: int = 5,
+    ) -> list[RetrievedChunk]:
+        """根据 query 向量检索最相似的文本块。
+
+        Args:
+            query_vector: 查询向量。
+            top_k: 返回的最大结果数量。
+
+        Returns:
+            list[RetrievedChunk]: 检索命中的文本块列表。
+
+        Raises:
+            TypeError: 当 query_vector 不是 list[float] 时抛出。
+            ValueError: 当 query_vector 维度不匹配或 top_k 不合法时抛出。
+        """
+        self._validate_vector(query_vector, vector_name="query_vector")
+
+        if top_k <= 0:
+            raise ValueError("top_k 必须大于 0")
+
+        if not utility.has_collection(self.collection_name):
+            return []
+
+        collection = self._get_collection()
+        collection.load()
+
+        search_results = collection.search(
+            data=[query_vector],
+            anns_field="embedding",
+            param={
+                "metric_type": "COSINE",
+                "params": {"ef": 64},
+            },
+            limit=top_k,
+            output_fields=self.output_fields,
+        )
+
+        return [self._format_hit(hit) for hit in search_results[0]]
+
+    def drop_collection(self) -> None:
+        """删除当前 collection，主要用于测试或重建索引。"""
+        if utility.has_collection(self.collection_name):
+            utility.drop_collection(self.collection_name)
+
+    def _get_collection(self) -> Collection:
+        """获取当前 collection 对象。"""
+        return Collection(self.collection_name)
+
+    def _validate_vector(
+        self,
+        vector: list[float],
+        *,
+        vector_name: str,
+    ) -> None:
+        """校验向量类型和维度。
+
+        Args:
+            vector: 待校验的向量。
+            vector_name: 错误提示中使用的向量名称。
+
+        Raises:
+            TypeError: 当向量不是 list 或包含非数字元素时抛出。
+            ValueError: 当向量维度与 collection 维度不一致时抛出。
+        """
+        if not isinstance(vector, list):
+            raise TypeError(f"{vector_name} 必须是 list[float] 类型")
+
+        if len(vector) != self.dimension:
+            raise ValueError(f"{vector_name} 维度必须等于 {self.dimension}")
+
+        if not all(isinstance(value, Real) for value in vector):
+            raise TypeError(f"{vector_name} 中的元素必须全部是数字")
+
+    def _format_hit(self, hit: Any) -> RetrievedChunk:
+        """将 Milvus hit 对象转换为项目内部统一的 RetrievedChunk 结果。
+
+        Args:
+            hit: Milvus search 返回的单个命中结果。
+
+        Returns:
+            RetrievedChunk: 项目内部使用的检索结果。
+        """
+        entity = hit.entity
+
+        return RetrievedChunk(
+            chunk_id=entity.get("chunk_id"),
+            document_id=entity.get("document_id"),
+            text=entity.get("text"),
+            score=hit.distance,
+            metadata=entity.get("metadata") or {},
+            milvus_id=hit.id,
         )

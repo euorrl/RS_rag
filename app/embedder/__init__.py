@@ -1,4 +1,14 @@
+from typing import TYPE_CHECKING
+
 from app.embedder.embedder_base import BaseEmbedder
+
+if TYPE_CHECKING:  # pragma: no cover
+    from app.embedder.bge_embedder import BGEEmbedder as BGEEmbedder  # noqa: F401
+    from app.embedder.embedder_factory import embed_chunks as embed_chunks  # noqa: F401
+    from app.embedder.embedder_factory import get_embedder as get_embedder  # noqa: F401
+    from app.embedder.minilm_embedder import (  # noqa: F401
+        SentenceTransformerEmbedder as SentenceTransformerEmbedder,
+    )
 
 __all__ = [
     "BaseEmbedder",

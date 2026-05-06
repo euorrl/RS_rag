@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.schemas import EmbeddedChunk
+from app.schemas import EmbeddedChunk, RetrievedChunk
 
 
 class BaseVectorStore(ABC):
@@ -21,7 +21,7 @@ class BaseVectorStore(ABC):
         self,
         query_vector: list[float],
         top_k: int = 5,
-    ) -> list[dict]:
+    ) -> list[RetrievedChunk]:
         """根据 query 向量检索最相似的 chunks。"""
         raise NotImplementedError
 

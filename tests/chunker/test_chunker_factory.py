@@ -30,7 +30,9 @@ def test_chunk_document_returns_chunks():
 
     assert len(chunks) == 1
     assert isinstance(chunks[0], Chunk)
-    assert chunks[0].text.startswith("# Title")
+    assert chunks[0].text == "Content."
+    assert chunks[0].metadata["headers"]["h1"] == "Title"
+    assert chunks[0].metadata["header_path"] == "Title"
 
 
 def test_chunk_document_passes_kwargs():

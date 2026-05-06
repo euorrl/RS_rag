@@ -37,3 +37,11 @@ services:
     depends_on:
       - etcd
       - minio
+
+  attu:
+    image: zilliz/attu:latest
+    container_name: milvus-attu
+    ports:
+      - "8000:3000"
+    depends_on:
+      - milvus

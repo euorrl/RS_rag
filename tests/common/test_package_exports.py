@@ -10,14 +10,20 @@ def test_schemas_init_exports_public_api():
     """验证 schemas 模块通过 __init__ 暴露统一的数据结构入口。"""
     import app.schemas as schemas
 
-    assert schemas.__all__ == ["Document", "Chunk", "EmbeddedChunk"]
+    assert schemas.__all__ == [
+        "Document",
+        "Chunk",
+        "EmbeddedChunk",
+        "RetrievedChunk",
+    ]
     assert schemas.Document.__name__ == "Document"
     assert schemas.Chunk.__name__ == "Chunk"
     assert schemas.EmbeddedChunk.__name__ == "EmbeddedChunk"
+    assert schemas.RetrievedChunk.__name__ == "RetrievedChunk"
 
 
-def test_reader_init_exports_public_api():
-    """验证 reader 模块通过 __init__ 暴露统一的 Reader 入口。"""
+def test_reader_init_exports_base_without_loading_reader_modules():
+    """验证 reader 模块可直接导入轻量 BaseReader。"""
     import app.reader as reader
 
     assert reader.__all__ == [
@@ -30,16 +36,47 @@ def test_reader_init_exports_public_api():
         "load_document",
     ]
     assert reader.BaseReader.__name__ == "BaseReader"
-    assert reader.TextReader.__name__ == "TextReader"
-    assert reader.MarkdownReader.__name__ == "MarkdownReader"
-    assert reader.MinerUPdfReader.__name__ == "MinerUPdfReader"
-    assert reader.MinerUImageReader.__name__ == "MinerUImageReader"
-    assert callable(reader.get_reader)
-    assert callable(reader.load_document)
 
 
-def test_chunker_init_exports_public_api():
-    """验证 chunker 模块通过 __init__ 暴露统一的 Chunker 入口。"""
+def test_reader_init_lazy_loads_public_api(monkeypatch):
+    """验证 reader 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.reader as reader
+
+    text_module = ModuleType("app.reader.text_reader")
+    text_module.TextReader = type("TextReader", (), {})
+
+    markdown_module = ModuleType("app.reader.markdown_reader")
+    markdown_module.MarkdownReader = type("MarkdownReader", (), {})
+
+    pdf_module = ModuleType("app.reader.mineru_pdf_reader")
+    pdf_module.MinerUPdfReader = type("MinerUPdfReader", (), {})
+
+    image_module = ModuleType("app.reader.mineru_image_reader")
+    image_module.MinerUImageReader = type("MinerUImageReader", (), {})
+
+    factory_module = ModuleType("app.reader.reader_factory")
+    factory_module.get_reader = lambda *args, **kwargs: None
+    factory_module.load_document = lambda *args, **kwargs: None
+
+    monkeypatch.setitem(sys.modules, text_module.__name__, text_module)
+    monkeypatch.setitem(sys.modules, markdown_module.__name__, markdown_module)
+    monkeypatch.setitem(sys.modules, pdf_module.__name__, pdf_module)
+    monkeypatch.setitem(sys.modules, image_module.__name__, image_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert reader.__getattr__("TextReader") is text_module.TextReader
+    assert reader.__getattr__("MarkdownReader") is markdown_module.MarkdownReader
+    assert reader.__getattr__("MinerUPdfReader") is pdf_module.MinerUPdfReader
+    assert reader.__getattr__("MinerUImageReader") is image_module.MinerUImageReader
+    assert reader.__getattr__("get_reader") is factory_module.get_reader
+    assert reader.__getattr__("load_document") is factory_module.load_document
+
+    with pytest.raises(AttributeError):
+        reader.__getattr__("UnknownReader")
+
+
+def test_chunker_init_exports_base_without_loading_chunker_modules():
+    """验证 chunker 模块可直接导入轻量 BaseChunker。"""
     import app.chunker as chunker
 
     assert chunker.__all__ == [
@@ -49,9 +86,28 @@ def test_chunker_init_exports_public_api():
         "chunk_document",
     ]
     assert chunker.BaseChunker.__name__ == "BaseChunker"
-    assert chunker.MarkdownChunker.__name__ == "MarkdownChunker"
-    assert callable(chunker.get_chunker)
-    assert callable(chunker.chunk_document)
+
+
+def test_chunker_init_lazy_loads_public_api(monkeypatch):
+    """验证 chunker 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.chunker as chunker
+
+    markdown_module = ModuleType("app.chunker.markdown_chunker")
+    markdown_module.MarkdownChunker = type("MarkdownChunker", (), {})
+
+    factory_module = ModuleType("app.chunker.chunker_factory")
+    factory_module.get_chunker = lambda *args, **kwargs: None
+    factory_module.chunk_document = lambda *args, **kwargs: None
+
+    monkeypatch.setitem(sys.modules, markdown_module.__name__, markdown_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert chunker.__getattr__("MarkdownChunker") is markdown_module.MarkdownChunker
+    assert chunker.__getattr__("get_chunker") is factory_module.get_chunker
+    assert chunker.__getattr__("chunk_document") is factory_module.chunk_document
+
+    with pytest.raises(AttributeError):
+        chunker.__getattr__("UnknownChunker")
 
 
 def test_embedder_init_exports_base_without_loading_heavy_modules():
@@ -106,22 +162,36 @@ def test_vector_store_init_exports_base_without_loading_milvus():
     """验证 vector_store 模块可直接导入轻量 BaseVectorStore。"""
     import app.vector_store as vector_store
 
-    assert vector_store.__all__ == ["BaseVectorStore", "MilvusVectorStore"]
+    assert vector_store.__all__ == [
+        "BaseVectorStore",
+        "MilvusVectorStore",
+        "get_vector_store",
+        "save_embedded_chunks",
+    ]
     assert vector_store.BaseVectorStore.__name__ == "BaseVectorStore"
 
 
-def test_vector_store_init_lazy_loads_milvus_store(monkeypatch):
-    """验证 vector_store 模块通过 __getattr__ 懒加载 Milvus 入口。"""
+def test_vector_store_init_lazy_loads_public_api(monkeypatch):
+    """验证 vector_store 模块通过 __getattr__ 懒加载公共入口。"""
     import app.vector_store as vector_store
 
     milvus_module = ModuleType("app.vector_store.milvus_store")
     milvus_module.MilvusVectorStore = type("MilvusVectorStore", (), {})
 
+    factory_module = ModuleType("app.vector_store.vector_store_factory")
+    factory_module.get_vector_store = lambda *args, **kwargs: None
+    factory_module.save_embedded_chunks = lambda *args, **kwargs: None
+
     monkeypatch.setitem(sys.modules, milvus_module.__name__, milvus_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
 
     assert (
         vector_store.__getattr__("MilvusVectorStore") is milvus_module.MilvusVectorStore
     )
+    loaded_get_vector_store = vector_store.__getattr__("get_vector_store")
+    assert loaded_get_vector_store is factory_module.get_vector_store
+    loaded_save_embedded_chunks = vector_store.__getattr__("save_embedded_chunks")
+    assert loaded_save_embedded_chunks is factory_module.save_embedded_chunks
 
     with pytest.raises(AttributeError):
         vector_store.__getattr__("UnknownVectorStore")
