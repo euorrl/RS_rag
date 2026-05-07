@@ -24,7 +24,7 @@ def chunk_document(document: Document, **kwargs) -> list[Chunk]:
     如 chunk_size、chunk_overlap、headers_to_split_on 等。
 
     适用于：
-    - 快速调用（无需显式实例化 chunker）
+    - 快速调用（无需显式实例化）
     - 需要简单配置但不想直接操作类的场景
 
     Args:

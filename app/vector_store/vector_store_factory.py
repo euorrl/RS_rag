@@ -44,11 +44,15 @@ def save_embedded_chunks(
 ) -> BaseVectorStore:
     """将 EmbeddedChunk 列表保存到向量数据库。
 
-    该函数是 VectorStore 层的便捷入口，用于简化主流程调用：
+    该函数是 VectorStore 层的轻量封装，用于简化调用流程：
     1. 根据 provider 创建具体 VectorStore。
     2. 在未显式传入 dimension 时，根据首个 embedding 自动推断向量维度。
     3. 调用 VectorStore.insert() 写入数据。
     4. 返回 VectorStore 实例，便于后续继续执行 search 等操作。
+
+    适用于：
+    - 快速调用（无需显式实例化）
+    - 需要简单配置但不想直接操作类的场景
 
     Args:
         embedded_chunks (list[EmbeddedChunk]): 待保存的向量化文本块列表。

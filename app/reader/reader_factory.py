@@ -52,6 +52,9 @@ def load_document(file_path: str | Path) -> Document:
     2. 调用 Reader.read() 解析文件；
     3. 返回统一格式的 Document 对象。
 
+    适用于：
+    - 快速调用（无需显式实例化 chunker）
+    - 需要简单配置但不想直接操作类的场景
 
     Args:
         file_path: 输入文件路径（支持 str 或 Path）。

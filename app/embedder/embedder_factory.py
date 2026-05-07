@@ -48,11 +48,15 @@ def embed_chunks(
 ) -> list[EmbeddedChunk]:
     """将 Chunk 列表转换为 EmbeddedChunk 列表（执行向量化）。
 
-    该函数是 Embedder 层的统一入口：
+    该函数是 Embedder 层的轻量封装，用于简化调用流程。
     1. 根据 provider 选择具体 Embedder。
     2. 提取 Chunk 中的文本。
     3. 批量生成 embedding。
     4. 构建 EmbeddedChunk 结构返回。
+
+    适用于：
+    - 快速调用（无需显式实例化）
+    - 需要简单配置但不想直接操作类的场景
 
     Args:
         chunks (list[Chunk]): 待向量化的文本块列表。

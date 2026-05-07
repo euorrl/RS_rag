@@ -195,3 +195,38 @@ def test_vector_store_init_lazy_loads_public_api(monkeypatch):
 
     with pytest.raises(AttributeError):
         vector_store.__getattr__("UnknownVectorStore")
+
+
+def test_recaller_init_exports_base_without_loading_heavy_modules():
+    """验证 recaller 模块可直接导入轻量级 BaseRecaller。"""
+    import app.recaller as recaller
+
+    assert recaller.__all__ == [
+        "BaseRecaller",
+        "VectorRecaller",
+        "get_recaller",
+        "recall",
+    ]
+    assert recaller.BaseRecaller.__name__ == "BaseRecaller"
+
+
+def test_recaller_init_lazy_loads_public_api(monkeypatch):
+    """验证 recaller 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.recaller as recaller
+
+    vector_module = ModuleType("app.recaller.vector_recaller")
+    vector_module.VectorRecaller = type("VectorRecaller", (), {})
+
+    factory_module = ModuleType("app.recaller.recaller_factory")
+    factory_module.get_recaller = lambda *args, **kwargs: None
+    factory_module.recall = lambda *args, **kwargs: []
+
+    monkeypatch.setitem(sys.modules, vector_module.__name__, vector_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert recaller.__getattr__("VectorRecaller") is vector_module.VectorRecaller
+    assert recaller.__getattr__("get_recaller") is factory_module.get_recaller
+    assert recaller.__getattr__("recall") is factory_module.recall
+
+    with pytest.raises(AttributeError):
+        recaller.__getattr__("UnknownRecaller")
