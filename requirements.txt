@@ -1,32 +1,19 @@
-mkdocs
-mkdocs-material
-
-# testing
-pytest
-pytest-cov
-
-# dev tools
-black
-flake8
-
 # runtime
 requests
 python-dotenv
-langchain-text-splitters
-mkdocs
-mkdocs-material
-
-# testing
-pytest
-pytest-cov
-
-# dev tools
-black
-flake8
-
-# runtime
-requests
-python-dotenv
+langchain-core
 langchain-text-splitters
 sentence-transformers
 pymilvus
+
+# docs
+mkdocs
+mkdocs-material
+
+# testing
+pytest
+pytest-cov
+
+# dev tools
+black
+flake8
