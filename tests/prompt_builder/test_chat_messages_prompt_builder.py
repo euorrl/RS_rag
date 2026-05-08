@@ -43,6 +43,25 @@ def test_chat_messages_prompt_builder_builds_messages():
     assert "score_details" not in messages[1]["content"]
 
 
+def test_chat_messages_prompt_builder_accepts_string_builder_options():
+    """验证 ChatMessagesPromptBuilder 支持字符串构建器的初始化参数。"""
+    prompt_builder = ChatMessagesPromptBuilder(
+        system_prompt="自定义系统提示词",
+        max_context_chars=20,
+        allow_general_fallback=False,
+    )
+
+    messages = prompt_builder.build("什么是 NDVI?", make_retrieved_chunks())
+
+    assert prompt_builder.allow_general_fallback is False
+    assert prompt_builder.max_context_chars == 20
+    assert messages[0] == {
+        "role": "system",
+        "content": "自定义系统提示词",
+    }
+    assert "...[参考资料已截断]" in messages[-1]["content"]
+
+
 def test_chat_messages_prompt_builder_inserts_history_between_messages():
     """验证 history 会被插入 system message 和当前 user message 之间。"""
     prompt_builder = ChatMessagesPromptBuilder()

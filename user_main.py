@@ -5,14 +5,12 @@ from app.reranker import rerank
 
 def main() -> None:
     query = "什么是3S，有哪些应用?"
-    score_threshold = 0.4
-    allow_general_fallback = True
 
     recall_results = recall(
         query=query,
         provider="vector",
         top_k=30,
-        score_threshold=score_threshold,
+        score_threshold=0.4,
         embedder_provider="bge",
         embedder_kwargs={
             "model_name": "BAAI/bge-small-zh-v1.5",
@@ -39,13 +37,12 @@ def main() -> None:
         query=query,
         retrieved_chunks=reranker_results,
         provider="chat",
+        history=None,
         max_context_chars=12000,
-        allow_general_fallback=allow_general_fallback,
+        allow_general_fallback=True,
     )
 
     print(f"Query: {query}")
-    print(f"Recall score threshold: {score_threshold}")
-    print(f"Allow general fallback: {allow_general_fallback}")
     print(f"Recall results: {len(recall_results)}")
     print(f"Rerank results: {len(reranker_results)}")
 

@@ -3,7 +3,6 @@ from numbers import Real
 from app.reranker.reranker_base import BaseReranker
 from app.schemas import RetrievedChunk
 
-
 CrossEncoder = None
 
 

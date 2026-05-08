@@ -15,11 +15,15 @@ def test_schemas_init_exports_public_api():
         "Chunk",
         "EmbeddedChunk",
         "RetrievedChunk",
+        "ChatHistory",
+        "ConversationTurn",
     ]
     assert schemas.Document.__name__ == "Document"
     assert schemas.Chunk.__name__ == "Chunk"
     assert schemas.EmbeddedChunk.__name__ == "EmbeddedChunk"
     assert schemas.RetrievedChunk.__name__ == "RetrievedChunk"
+    assert schemas.ChatHistory.__name__ == "ChatHistory"
+    assert schemas.ConversationTurn.__name__ == "ConversationTurn"
 
 
 def test_reader_init_exports_base_without_loading_reader_modules():

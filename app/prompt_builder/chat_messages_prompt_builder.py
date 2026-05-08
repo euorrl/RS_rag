@@ -15,6 +15,37 @@ class ChatMessagesPromptBuilder(StringPromptBuilder):
 
     allowed_history_roles = {"user", "assistant", "system"}
 
+    def __init__(
+        self,
+        system_prompt: str | None = None,
+        max_context_chars: int | None = 12000,
+        allow_general_fallback: bool = True,
+    ):
+        """初始化 Chat messages PromptBuilder。
+
+        Args:
+            system_prompt (str | None): 自定义系统提示词。
+                如果不传，则根据 allow_general_fallback 使用默认提示词。
+            max_context_chars (int | None): 参考资料部分的最大字符数。
+                默认 12000；如果为 None，则不截断参考资料。
+            allow_general_fallback (bool): 参考资料不足时是否允许使用通用知识补充。
+                默认 True；如果为 False，则必须严格只依据参考资料回答。
+
+        Raises:
+            TypeError:
+                - system_prompt 不是 str 或 None
+                - max_context_chars 不是 int 或 None
+                - allow_general_fallback 不是 bool
+            ValueError:
+                - system_prompt 为空字符串
+                - max_context_chars 不大于 0
+        """
+        super().__init__(
+            system_prompt=system_prompt,
+            max_context_chars=max_context_chars,
+            allow_general_fallback=allow_general_fallback,
+        )
+
     def build(
         self,
         query: str,
