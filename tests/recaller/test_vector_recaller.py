@@ -81,7 +81,8 @@ def test_vector_recaller_embeds_query_and_searches_vector_store():
     assert len(results) == 1
     assert results[0].chunk_id == "chunk-1"
     assert results[0].rank == 1
-    assert results[0].retrieval_method == "vector"
+    assert results[0].recall_method == "vector"
+    assert results[0].rerank_method is None
     assert results[0].score_details == {"vector_score": 0.98}
 
 

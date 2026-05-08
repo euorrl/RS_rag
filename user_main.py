@@ -1,11 +1,14 @@
+from app.prompt_builder import build_messages_prompt
 from app.recaller import recall
+from app.reranker import rerank
 
 
 def main() -> None:
-    query = "植物遥感之所以可以被运用，其背后的原理是什么，是因为植物的光谱曲线具有区分性的特征吗?"
+    query = "什么是3S，有哪些应用?"
     score_threshold = 0.4
+    allow_general_fallback = True
 
-    results = recall(
+    recall_results = recall(
         query=query,
         provider="vector",
         top_k=30,
@@ -24,23 +27,41 @@ def main() -> None:
             "dimension": 512,
         },
     )
+    reranker_results = rerank(
+        query=query,
+        candidates=recall_results,
+        provider="bge",
+        top_n=10,
+        score_threshold=0.5,
+        model_name="BAAI/bge-reranker-v2-m3",
+    )
+    prompt = build_messages_prompt(
+        query=query,
+        retrieved_chunks=reranker_results,
+        provider="chat",
+        max_context_chars=12000,
+        allow_general_fallback=allow_general_fallback,
+    )
 
     print(f"Query: {query}")
-    print(f"Score threshold: {score_threshold}")
-    print(f"Results: {len(results)}")
+    print(f"Recall score threshold: {score_threshold}")
+    print(f"Allow general fallback: {allow_general_fallback}")
+    print(f"Recall results: {len(recall_results)}")
+    print(f"Rerank results: {len(reranker_results)}")
 
-    if not results:
-        print("No high-score chunks found. Send the original query to LLM directly.")
-        return
+    print("*" * 80)
+    for idx, result in enumerate(reranker_results, start=1):
+        print(f"Rank: {idx}")
+        print(f"Chunk ID: {result.chunk_id}")
+        print(f"Document ID: {result.document_id}")
+        print(f"Text: {result.text}")
+        print(f"Score: {result.score}")
+        print(f"Score details: {result.score_details}")
+        print("-" * 80)
 
-    for result in results:
-        print("=" * 80)
-        print(f"rank: {result.rank}")
-        print(f"score: {result.score}")
-        print(f"chunk_id: {result.chunk_id}")
-        print(f"document_id: {result.document_id}")
-        print(f"metadata: {result.metadata}")
-        print(result.text)
+    print("*" * 80)
+    print("Messages prompt:")
+    print(prompt)
 
 
 if __name__ == "__main__":

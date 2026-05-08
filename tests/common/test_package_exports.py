@@ -230,3 +230,104 @@ def test_recaller_init_lazy_loads_public_api(monkeypatch):
 
     with pytest.raises(AttributeError):
         recaller.__getattr__("UnknownRecaller")
+
+
+def test_reranker_init_exports_base_without_loading_heavy_modules():
+    """验证 reranker 模块可直接导入轻量级 BaseReranker。"""
+    import app.reranker as reranker
+
+    assert reranker.__all__ == [
+        "BaseReranker",
+        "BGEReranker",
+        "get_reranker",
+        "rerank",
+    ]
+    assert reranker.BaseReranker.__name__ == "BaseReranker"
+
+
+def test_reranker_init_lazy_loads_public_api(monkeypatch):
+    """验证 reranker 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.reranker as reranker
+
+    bge_module = ModuleType("app.reranker.bge_reranker")
+    bge_module.BGEReranker = type("BGEReranker", (), {})
+
+    factory_module = ModuleType("app.reranker.reranker_factory")
+    factory_module.get_reranker = lambda *args, **kwargs: None
+    factory_module.rerank = lambda *args, **kwargs: []
+
+    monkeypatch.setitem(sys.modules, bge_module.__name__, bge_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert reranker.__getattr__("BGEReranker") is bge_module.BGEReranker
+    assert reranker.__getattr__("get_reranker") is factory_module.get_reranker
+    assert reranker.__getattr__("rerank") is factory_module.rerank
+
+    with pytest.raises(AttributeError):
+        reranker.__getattr__("UnknownReranker")
+
+
+def test_prompt_builder_init_exports_base_without_loading_heavy_modules():
+    """验证 prompt_builder 模块可直接导入轻量级 BasePromptBuilder。"""
+    import app.prompt_builder as prompt_builder
+
+    assert prompt_builder.__all__ == [
+        "BasePromptBuilder",
+        "ChatMessagesPromptBuilder",
+        "StringPromptBuilder",
+        "get_prompt_builder",
+        "build_prompt",
+        "build_messages_prompt",
+        "build_string_prompt",
+    ]
+    assert prompt_builder.BasePromptBuilder.__name__ == "BasePromptBuilder"
+
+
+def test_prompt_builder_init_lazy_loads_public_api(monkeypatch):
+    """验证 prompt_builder 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.prompt_builder as prompt_builder
+
+    chat_module = ModuleType("app.prompt_builder.chat_messages_prompt_builder")
+    chat_module.ChatMessagesPromptBuilder = type(
+        "ChatMessagesPromptBuilder",
+        (),
+        {},
+    )
+
+    string_module = ModuleType("app.prompt_builder.string_prompt_builder")
+    string_module.StringPromptBuilder = type("StringPromptBuilder", (), {})
+
+    factory_module = ModuleType("app.prompt_builder.prompt_builder_factory")
+    factory_module.get_prompt_builder = lambda *args, **kwargs: None
+    factory_module.build_prompt = lambda *args, **kwargs: ""
+    factory_module.build_messages_prompt = lambda *args, **kwargs: []
+    factory_module.build_string_prompt = lambda *args, **kwargs: ""
+
+    monkeypatch.setitem(sys.modules, chat_module.__name__, chat_module)
+    monkeypatch.setitem(sys.modules, string_module.__name__, string_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert (
+        prompt_builder.__getattr__("ChatMessagesPromptBuilder")
+        is chat_module.ChatMessagesPromptBuilder
+    )
+    assert (
+        prompt_builder.__getattr__("StringPromptBuilder")
+        is string_module.StringPromptBuilder
+    )
+    assert (
+        prompt_builder.__getattr__("get_prompt_builder")
+        is factory_module.get_prompt_builder
+    )
+    assert prompt_builder.__getattr__("build_prompt") is factory_module.build_prompt
+    assert (
+        prompt_builder.__getattr__("build_messages_prompt")
+        is factory_module.build_messages_prompt
+    )
+    assert (
+        prompt_builder.__getattr__("build_string_prompt")
+        is factory_module.build_string_prompt
+    )
+
+    with pytest.raises(AttributeError):
+        prompt_builder.__getattr__("UnknownPromptBuilder")

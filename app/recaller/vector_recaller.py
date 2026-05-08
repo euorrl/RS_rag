@@ -54,7 +54,7 @@ class VectorRecaller(BaseRecaller):
         2. 使用 embedder.embed_query() 生成 query 向量。
         3. 调用 vector_store.search() 召回相似 chunks。
         4. 根据 score_threshold 过滤低分结果。
-        5. 补充 rank、retrieval_method 和 score_details 等统一结果字段。
+        5. 补充 rank、recall_method 和 score_details 等统一结果字段。
 
         Args:
             query (str): 用户查询文本。
@@ -141,7 +141,7 @@ class VectorRecaller(BaseRecaller):
         """
         for index, result in enumerate(results, start=1):
             result.rank = index
-            result.retrieval_method = "vector"
+            result.recall_method = "vector"
 
             if "vector_score" not in result.score_details:
                 result.score_details["vector_score"] = result.score

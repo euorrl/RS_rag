@@ -10,8 +10,8 @@ class RetrievedChunk:
     用于表示一次召回、混合检索或重排序后命中的文本块。
 
     可以理解为：
-    Chunk 去掉 embedding 后，加上检索分数（score）、排序位置（rank）
-    和检索来源信息（retrieval_method / score_details）。
+    Chunk 去掉 embedding 后，加上检索分数（score）、排序位置（rank）、
+    召回来源信息（recall_method）和重排来源信息（rerank_method）。
 
     每个 RetrievedChunk 包含：
     - 文本块 ID（chunk_id）
@@ -19,7 +19,7 @@ class RetrievedChunk:
     - 命中的文本内容（text）
     - 当前阶段主分数（score）
     - 元信息（metadata）
-    - 排序与检索来源信息（rank、retrieval_method、score_details）
+    - 排序与检索来源信息（rank、recall_method、rerank_method、score_details）
 
     metadata 通常继承自 Chunk.metadata，包含：
     - 文档来源信息（source_path、file_name 等）
@@ -67,14 +67,22 @@ class RetrievedChunk:
     rank: int | None = None
     """当前结果列表中的排序位置。"""
 
-    retrieval_method: str = "vector"
-    """产生该结果的检索方式。
+    recall_method: str = "vector"
+    """产生该结果的召回方式。
 
     例如：
     - vector
     - bm25
     - hybrid
-    - reranker
+    """
+
+    rerank_method: str | None = None
+    """产生该结果最终重排顺序的 reranker。
+
+    未经过 reranker 时为 None；经过重排后可以记录：
+    - bge
+    - openai
+    等。
     """
 
     score_details: dict[str, Any] = field(default_factory=dict)
