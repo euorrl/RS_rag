@@ -383,3 +383,13 @@ def test_memory_init_exports_public_api():
         "ChatMemory",
     ]
     assert memory.ChatMemory.__name__ == "ChatMemory"
+
+
+def test_pipeline_init_exports_public_api():
+    """验证 pipeline 模块通过 __init__ 暴露统一入口。"""
+    import app.pipeline as pipeline
+
+    assert pipeline.__all__ == [
+        "RAGPipeline",
+    ]
+    assert pipeline.RAGPipeline.__name__ == "RAGPipeline"
