@@ -373,3 +373,13 @@ def test_generator_init_lazy_loads_public_api(monkeypatch):
 
     with pytest.raises(AttributeError):
         generator.__getattr__("UnknownGenerator")
+
+
+def test_memory_init_exports_public_api():
+    """验证 memory 模块通过 __init__ 暴露统一入口。"""
+    import app.memory as memory
+
+    assert memory.__all__ == [
+        "ChatMemory",
+    ]
+    assert memory.ChatMemory.__name__ == "ChatMemory"
