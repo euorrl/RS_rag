@@ -5,6 +5,7 @@ from app.generator import get_generator
 from app.generator.generator_base import Prompt
 from app.memory import ChatMemory
 from app.prompt_builder import get_prompt_builder
+from app.query_rewriter import LLMQueryRewriter
 from app.recaller import get_recaller
 from app.reranker import get_reranker
 from app.schemas import RetrievedChunk
@@ -14,9 +15,10 @@ from app.vector_store import get_vector_store
 class RAGPipeline:
     """RAG 问答流水线。
 
-    RAGPipeline 用于串联已经实现的 recaller、reranker、prompt_builder、generator
-    和 memory 模块，完成一轮完整的 RAG 问答流程：
-    query -> VectorRecaller -> BGEReranker -> PromptBuilder -> Generator -> answer。
+    RAGPipeline 用于串联已经实现的 query_rewriter、recaller、reranker、
+    prompt_builder、generator 和 memory 模块，完成一轮完整的 RAG 问答流程：
+    query -> QueryRewriter -> VectorRecaller -> BGEReranker -> PromptBuilder
+    -> Generator -> answer。
 
     该类会在初始化时创建并持有各个模型或服务对象，后续每一轮问答都会复用已经初始化的对象，
     避免反复加载 embedding 模型、reranker 模型和 LLM client。
@@ -53,6 +55,7 @@ class RAGPipeline:
         generator_client: Any | None = None,
         generator_request_kwargs: dict[str, Any] | None = None,
         memory_max_turns: int = 5,
+        enable_query_rewriter: bool = True,
         embedder_kwargs: dict[str, Any] | None = None,
         vector_store_kwargs: dict[str, Any] | None = None,
         reranker_kwargs: dict[str, Any] | None = None,
@@ -65,6 +68,7 @@ class RAGPipeline:
         prompt_builder: Any | None = None,
         generator: Any | None = None,
         memory: ChatMemory | None = None,
+        query_rewriter: Any | None = None,
     ) -> None:
         """初始化 RAGPipeline。
 
@@ -92,6 +96,7 @@ class RAGPipeline:
             generator_client (Any | None): 已初始化的 OpenAI client，主要用于测试或自定义 client。
             generator_request_kwargs (dict[str, Any] | None): 传递给模型接口的额外请求参数。
             memory_max_turns (int): ChatMemory 最多保留的最近完整问答轮数。
+            enable_query_rewriter (bool): 是否启用 query rewrite，默认 True。
             embedder_kwargs (dict[str, Any] | None): 额外传递给 get_embedder() 的参数。
             vector_store_kwargs (dict[str, Any] | None): 额外传递给 get_vector_store() 的参数。
             reranker_kwargs (dict[str, Any] | None): 额外传递给 get_reranker() 的参数。
@@ -105,6 +110,7 @@ class RAGPipeline:
             prompt_builder (Any | None): 已初始化的 PromptBuilder，传入后不会重复创建。
             generator (Any | None): 已初始化的 Generator，传入后不会重复创建。
             memory (ChatMemory | None): 已初始化的 ChatMemory，传入后不会重复创建。
+            query_rewriter (Any | None): 已初始化的 QueryRewriter，传入后不会重复创建。
         """
         self.embedder = embedder
         self.vector_store = vector_store
@@ -157,6 +163,11 @@ class RAGPipeline:
             generator_kwargs=generator_kwargs,
         )
         self.memory = memory or ChatMemory(max_turns=memory_max_turns)
+        self.enable_query_rewriter = enable_query_rewriter
+        self.query_rewriter = query_rewriter or LLMQueryRewriter(
+            generator=self.generator,
+        )
+        self.last_rewritten_query: str | None = None
 
     def retrieve(
         self,
@@ -216,6 +227,38 @@ class RAGPipeline:
             history=history,
         )
 
+    def rewrite_query(
+        self,
+        query: str,
+        history: list[dict[str, str]] | None = None,
+        enable_query_rewriter: bool | None = None,
+    ) -> str:
+        """根据历史对话改写检索用 query。
+
+        Args:
+            query (str): 当前用户原始问题。
+            history (list[dict[str, str]] | None): 历史对话 messages。
+                如果不传，则自动使用内部 ChatMemory 中保存的历史。
+            enable_query_rewriter (bool | None): 是否启用 query rewrite。
+                如果为 None，则使用初始化时的 enable_query_rewriter。
+
+        Returns:
+            str: 用于召回和重排的检索问题。
+        """
+        if history is None:
+            history = self.memory.get_messages()
+
+        if enable_query_rewriter is None:
+            enable_query_rewriter = self.enable_query_rewriter
+
+        if not enable_query_rewriter:
+            return query.strip()
+
+        return self.query_rewriter.rewrite(
+            query=query,
+            history=history,
+        )
+
     def ask(
         self,
         query: str,
@@ -224,7 +267,9 @@ class RAGPipeline:
         rerank_top_n: int = 10,
         rerank_score_threshold: float | None = 0.5,
         history: list[dict[str, str]] | None = None,
+        enable_query_rewriter: bool | None = None,
         save_to_memory: bool = True,
+        print_rewritten_query: bool = False,
         print_prompt: bool = True,
         print_answer: bool = True,
     ) -> str:
@@ -238,7 +283,10 @@ class RAGPipeline:
             rerank_score_threshold (float | None): 重排阶段最低分数阈值，默认 0.5。
             history (list[dict[str, str]] | None): 可选历史消息。
                 如果不传，则自动使用内部 ChatMemory 中保存的历史。
+            enable_query_rewriter (bool | None): 是否启用 query rewrite。
+                如果为 None，则使用初始化时的 enable_query_rewriter。
             save_to_memory (bool): 是否在答案生成完成后写入内部 ChatMemory。
+            print_rewritten_query (bool): 是否打印改写后的检索问题。
             print_prompt (bool): 是否打印当前轮 prompt。
             print_answer (bool): 是否流式打印当前轮答案。
 
@@ -252,8 +300,22 @@ class RAGPipeline:
         if not query:
             raise ValueError("query 不能为空字符串")
 
-        retrieved_chunks = self.retrieve(
+        if history is None:
+            history = self.memory.get_messages()
+
+        rewritten_query = self.rewrite_query(
             query=query,
+            history=history,
+            enable_query_rewriter=enable_query_rewriter,
+        )
+        self.last_rewritten_query = rewritten_query
+
+        if print_rewritten_query:
+            self._print_section("Rewritten Query")
+            print(rewritten_query)
+
+        retrieved_chunks = self.retrieve(
+            query=rewritten_query,
             recall_top_k=recall_top_k,
             recall_score_threshold=recall_score_threshold,
             rerank_top_n=rerank_top_n,

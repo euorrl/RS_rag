@@ -393,3 +393,13 @@ def test_pipeline_init_exports_public_api():
         "RAGPipeline",
     ]
     assert pipeline.RAGPipeline.__name__ == "RAGPipeline"
+
+
+def test_query_rewriter_init_exports_public_api():
+    """验证 query_rewriter 模块通过 __init__ 暴露统一入口。"""
+    import app.query_rewriter as query_rewriter
+
+    assert query_rewriter.__all__ == [
+        "LLMQueryRewriter",
+    ]
+    assert query_rewriter.LLMQueryRewriter.__name__ == "LLMQueryRewriter"

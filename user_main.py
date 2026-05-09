@@ -9,7 +9,9 @@ def print_section(title: str) -> None:
 
 
 def main() -> None:
-    pipeline = RAGPipeline()
+    pipeline = RAGPipeline(
+        enable_query_rewriter=True,
+    )
 
     print("RAG 多轮问答已启动。输入 exit 或 quit 退出。")
     while True:
@@ -26,7 +28,13 @@ def main() -> None:
         print_section("Query")
         print(query)
 
-        pipeline.ask(query=query)
+        pipeline.ask(
+            query=query,
+            enable_query_rewriter=True,
+            print_rewritten_query=True,
+            print_prompt=False,
+            print_answer=True,
+        )
 
 
 if __name__ == "__main__":
