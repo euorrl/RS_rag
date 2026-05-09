@@ -1,3 +1,4 @@
+from app.generator import stream_generate
 from app.prompt_builder import build_messages_prompt
 from app.recaller import recall
 from app.reranker import rerank
@@ -31,8 +32,10 @@ def main() -> None:
         provider="bge",
         top_n=10,
         score_threshold=0.5,
-        model_name="BAAI/bge-reranker-v2-m3",
+        # model_name="BAAI/bge-reranker-v2-m3",
+        model_name="BAAI/bge-reranker-base",
     )
+
     prompt = build_messages_prompt(
         query=query,
         retrieved_chunks=reranker_results,
@@ -59,6 +62,16 @@ def main() -> None:
     print("*" * 80)
     print("Messages prompt:")
     print(prompt)
+
+    print("*" * 80)
+    print("Answer:")
+    for chunk in stream_generate(
+        prompt=prompt,
+        provider="openai",
+        model="gpt-5.4-mini",
+    ):
+        print(chunk, end="", flush=True)
+    print()
 
 
 if __name__ == "__main__":

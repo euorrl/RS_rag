@@ -1,6 +1,7 @@
 # runtime
 requests
 python-dotenv
+openai
 langchain-core
 langchain-text-splitters
 sentence-transformers

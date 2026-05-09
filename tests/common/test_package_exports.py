@@ -335,3 +335,41 @@ def test_prompt_builder_init_lazy_loads_public_api(monkeypatch):
 
     with pytest.raises(AttributeError):
         prompt_builder.__getattr__("UnknownPromptBuilder")
+
+
+def test_generator_init_exports_base_without_loading_heavy_modules():
+    """验证 generator 模块可直接导入轻量级 BaseGenerator。"""
+    import app.generator as generator
+
+    assert generator.__all__ == [
+        "BaseGenerator",
+        "OpenAIGenerator",
+        "get_generator",
+        "generate",
+        "stream_generate",
+    ]
+    assert generator.BaseGenerator.__name__ == "BaseGenerator"
+
+
+def test_generator_init_lazy_loads_public_api(monkeypatch):
+    """验证 generator 模块通过 __getattr__ 懒加载公共入口。"""
+    import app.generator as generator
+
+    openai_module = ModuleType("app.generator.openai_generator")
+    openai_module.OpenAIGenerator = type("OpenAIGenerator", (), {})
+
+    factory_module = ModuleType("app.generator.generator_factory")
+    factory_module.get_generator = lambda *args, **kwargs: None
+    factory_module.generate = lambda *args, **kwargs: ""
+    factory_module.stream_generate = lambda *args, **kwargs: iter(())
+
+    monkeypatch.setitem(sys.modules, openai_module.__name__, openai_module)
+    monkeypatch.setitem(sys.modules, factory_module.__name__, factory_module)
+
+    assert generator.__getattr__("OpenAIGenerator") is openai_module.OpenAIGenerator
+    assert generator.__getattr__("get_generator") is factory_module.get_generator
+    assert generator.__getattr__("generate") is factory_module.generate
+    assert generator.__getattr__("stream_generate") is factory_module.stream_generate
+
+    with pytest.raises(AttributeError):
+        generator.__getattr__("UnknownGenerator")

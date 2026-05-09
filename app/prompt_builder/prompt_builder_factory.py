@@ -14,7 +14,6 @@ def get_prompt_builder(
         provider (str): PromptBuilder 类型。
             当前支持：
             - "chat"
-            - "chat_messages"
             - "string"
         **kwargs: 传递给具体 PromptBuilder 的初始化参数，例如：
             - system_prompt (str): 自定义系统提示词
