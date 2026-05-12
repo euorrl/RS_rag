@@ -1,3 +1,4 @@
+import json
 from numbers import Real
 from typing import Any
 
@@ -192,6 +193,39 @@ class MilvusVectorStore(BaseVectorStore):
         )
 
         return [self._format_hit(hit) for hit in search_results[0]]
+
+    def get_chunk_text_by_id(self, chunk_id: str) -> str | None:
+        """根据 chunk_id 查询数据库中保存的 chunk 原文。
+        Args:
+            chunk_id: 业务侧文本块唯一标识。
+        Returns:
+            str | None: 命中时返回 chunk 原文；collection 不存在或未命中时返回 None。
+        Raises:
+            TypeError: 当 chunk_id 不是 str 时抛出。
+            ValueError: 当 chunk_id 为空字符串时抛出。
+        """
+        if not isinstance(chunk_id, str):
+            raise TypeError("chunk_id 必须是 str 类型")
+
+        if not chunk_id:
+            raise ValueError("chunk_id 不能为空")
+
+        if not utility.has_collection(self.collection_name):
+            return None
+
+        collection = self._get_collection()
+        collection.load()
+
+        rows = collection.query(
+            expr=f"chunk_id == {json.dumps(chunk_id, ensure_ascii=False)}",
+            output_fields=["text"],
+            limit=1,
+        )
+
+        if not rows:
+            return None
+
+        return rows[0].get("text")
 
     def drop_collection(self) -> None:
         """删除当前 collection，主要用于测试或重建索引。"""

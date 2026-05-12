@@ -346,6 +346,83 @@ def test_search_rejects_invalid_query():
         store.search([0.1, 0.2], top_k=0)
 
 
+def test_get_chunk_text_by_id_returns_none_when_collection_missing(monkeypatch):
+    """验证 collection 不存在时按 chunk_id 查询原文会返回 None。"""
+    store = make_store()
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.utility.has_collection",
+        lambda name: False,
+    )
+
+    assert store.get_chunk_text_by_id("chunk-1") is None
+
+
+def test_get_chunk_text_by_id_loads_collection_and_returns_text(monkeypatch):
+    """验证按 chunk_id 查询时会加载 collection 并返回对应原文。"""
+    store = make_store()
+
+    class FakeCollection:
+        def __init__(self):
+            self.loaded = False
+            self.query_kwargs = None
+
+        def load(self):
+            self.loaded = True
+
+        def query(self, **kwargs):
+            self.query_kwargs = kwargs
+            return [{"text": "NDVI 是一种植被指数。"}]
+
+    collection = FakeCollection()
+    store._get_collection = lambda: collection
+
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.utility.has_collection",
+        lambda name: True,
+    )
+
+    text = store.get_chunk_text_by_id('chunk-"1"')
+
+    assert text == "NDVI 是一种植被指数。"
+    assert collection.loaded is True
+    assert collection.query_kwargs == {
+        "expr": 'chunk_id == "chunk-\\"1\\""',
+        "output_fields": ["text"],
+        "limit": 1,
+    }
+
+
+def test_get_chunk_text_by_id_returns_none_when_chunk_missing(monkeypatch):
+    """验证按 chunk_id 查询未命中时返回 None。"""
+    store = make_store()
+
+    class FakeCollection:
+        def load(self):
+            return None
+
+        def query(self, **kwargs):
+            return []
+
+    store._get_collection = lambda: FakeCollection()
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.utility.has_collection",
+        lambda name: True,
+    )
+
+    assert store.get_chunk_text_by_id("chunk-404") is None
+
+
+def test_get_chunk_text_by_id_rejects_invalid_chunk_id():
+    """验证按 chunk_id 查询原文会拒绝非法参数。"""
+    store = make_store()
+
+    with pytest.raises(TypeError):
+        store.get_chunk_text_by_id(123)
+
+    with pytest.raises(ValueError):
+        store.get_chunk_text_by_id("")
+
+
 def test_drop_collection_only_drops_existing_collection(monkeypatch):
     """验证 drop_collection 只删除已存在的 collection。"""
     store = make_store()
