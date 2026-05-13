@@ -5,7 +5,6 @@ from pathlib import Path
 from app.generator import generate
 from app.vector_store.milvus_store import MilvusVectorStore
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
