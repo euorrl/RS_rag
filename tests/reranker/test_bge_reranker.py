@@ -1,5 +1,6 @@
 import sys
 from types import ModuleType
+from types import SimpleNamespace
 
 import pytest
 
@@ -25,26 +26,27 @@ class FakeCrossEncoder:
 
     scores = [0.2, 0.9, 0.5]
 
-    def __init__(self, model_name):
+    def __init__(self, model_name, device=None):
         self.model_name = model_name
+        self.device = device
         self.predict_calls = []
 
-    def predict(self, pairs):
-        self.predict_calls.append(pairs)
+    def predict(self, pairs, **kwargs):
+        self.predict_calls.append({"pairs": pairs, "kwargs": kwargs})
         return FakeScores(self.scores)
 
 
 class BadCountCrossEncoder(FakeCrossEncoder):
     """模拟返回分数数量错误的 CrossEncoder。"""
 
-    def predict(self, pairs):
+    def predict(self, pairs, **kwargs):
         return [0.1]
 
 
 class BadScoreCrossEncoder(FakeCrossEncoder):
     """模拟返回非数字分数的 CrossEncoder。"""
 
-    def predict(self, pairs):
+    def predict(self, pairs, **kwargs):
         return [0.1, "bad", 0.3]
 
 
@@ -82,7 +84,7 @@ def test_bge_reranker_initializes_model(monkeypatch):
         FakeCrossEncoder,
     )
 
-    reranker = BGEReranker(model_name="fake-reranker")
+    reranker = BGEReranker(model_name="fake-reranker", batch_size=32)
 
     assert reranker.model_name == "fake-reranker"
     assert reranker.model.model_name == "fake-reranker"
@@ -99,6 +101,114 @@ def test_get_cross_encoder_lazy_loads_sentence_transformers(monkeypatch):
     cross_encoder = bge_reranker._get_cross_encoder()
 
     assert cross_encoder is FakeCrossEncoder
+
+
+def test_resolve_batch_size_defaults_to_16_for_6gb_cuda(monkeypatch):
+    """验证 6GB 级别 CUDA 显卡默认使用较保守的 batch_size。"""
+    monkeypatch.delenv("RERANK_BATCH_SIZE", raising=False)
+    monkeypatch.setattr("app.reranker.bge_reranker._cuda_total_memory_gb", lambda: 6)
+
+    assert bge_reranker._resolve_batch_size(device="cuda", batch_size=None) == 16
+
+
+def test_resolve_batch_size_env_overrides_hardware_default(monkeypatch):
+    """验证环境变量优先于硬件自动默认值。"""
+    monkeypatch.setenv("RERANK_BATCH_SIZE", "8")
+    monkeypatch.setattr("app.reranker.bge_reranker._cuda_total_memory_gb", lambda: 6)
+
+    assert bge_reranker._resolve_batch_size(device="cuda", batch_size=None) == 8
+
+
+def test_cuda_total_memory_returns_none_when_cuda_unavailable(monkeypatch):
+    """验证 CUDA 不可用时无法读取显存并返回 None。"""
+    fake_torch = ModuleType("torch")
+    fake_torch.cuda = SimpleNamespace(is_available=lambda: False)
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    assert bge_reranker._cuda_total_memory_gb() is None
+
+
+def test_cuda_total_memory_returns_none_when_torch_errors(monkeypatch):
+    """验证 torch 查询显存失败时返回 None。"""
+    fake_torch = ModuleType("torch")
+    fake_torch.cuda = SimpleNamespace(
+        is_available=lambda: True,
+        current_device=lambda: (_ for _ in ()).throw(RuntimeError("cuda error")),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    assert bge_reranker._cuda_total_memory_gb() is None
+
+
+def test_has_cuda_device_returns_false_when_torch_errors(monkeypatch):
+    """验证 torch CUDA 检测失败时按无 CUDA 处理。"""
+    fake_torch = ModuleType("torch")
+    fake_torch.cuda = SimpleNamespace(
+        is_available=lambda: (_ for _ in ()).throw(RuntimeError("cuda error")),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    assert bge_reranker._has_cuda_device() is False
+
+
+def test_resolve_batch_size_rejects_non_positive_values(monkeypatch):
+    """验证 batch_size 小于等于 0 时会拒绝。"""
+    monkeypatch.delenv("RERANK_BATCH_SIZE", raising=False)
+
+    with pytest.raises(ValueError):
+        bge_reranker._resolve_batch_size(device="cpu", batch_size=0)
+
+
+@pytest.mark.parametrize(
+    ("device", "has_cuda", "memory_gb", "expected"),
+    [
+        ("cpu", True, 6, 32),
+        (None, False, 6, 32),
+        ("cuda", True, None, 16),
+        ("cuda", True, 3, 8),
+        ("cuda", True, 10, 32),
+        ("cuda", True, 16, 64),
+    ],
+)
+def test_default_batch_size_for_device_branches(
+    monkeypatch,
+    device,
+    has_cuda,
+    memory_gb,
+    expected,
+):
+    """验证不同设备和显存区间的默认 batch_size。"""
+    monkeypatch.setattr("app.reranker.bge_reranker._has_cuda_device", lambda: has_cuda)
+    monkeypatch.setattr(
+        "app.reranker.bge_reranker._cuda_total_memory_gb",
+        lambda: memory_gb,
+    )
+
+    assert bge_reranker._default_batch_size_for_device(device) == expected
+
+
+def test_bge_reranker_passes_explicit_device_to_model(monkeypatch):
+    """验证显式指定 device 时会传给模型加载和推理。"""
+    monkeypatch.setattr(
+        "app.reranker.bge_reranker.CrossEncoder",
+        FakeCrossEncoder,
+    )
+    reranker = BGEReranker(
+        model_name="fake-reranker",
+        device="cuda",
+        batch_size=16,
+    )
+
+    results = reranker.rerank("query", make_candidates(), top_n=1)
+
+    assert reranker.device == "cuda"
+    assert reranker.batch_size == 16
+    assert reranker.model.device == "cuda"
+    assert reranker.model.predict_calls[0]["kwargs"] == {
+        "batch_size": 16,
+        "device": "cuda",
+    }
+    assert [result.chunk_id for result in results] == ["chunk-2"]
 
 
 def test_bge_reranker_wraps_model_load_failure(monkeypatch):
@@ -123,16 +233,19 @@ def test_bge_reranker_reranks_candidates_by_score(monkeypatch):
         FakeCrossEncoder,
     )
     candidates = make_candidates()
-    reranker = BGEReranker(model_name="fake-reranker")
+    reranker = BGEReranker(model_name="fake-reranker", batch_size=32)
 
     results = reranker.rerank("query", candidates, top_n=2)
 
     assert reranker.model.predict_calls == [
-        [
-            ["query", "candidate one"],
-            ["query", "candidate two"],
-            ["query", "candidate three"],
-        ]
+        {
+            "pairs": [
+                ["query", "candidate one"],
+                ["query", "candidate two"],
+                ["query", "candidate three"],
+            ],
+            "kwargs": {"batch_size": 32, "device": None},
+        }
     ]
     assert [result.chunk_id for result in results] == ["chunk-2", "chunk-3"]
     assert [result.rank for result in results] == [1, 2]

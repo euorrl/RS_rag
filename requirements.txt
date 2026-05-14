@@ -1,9 +1,12 @@
 # runtime
+--extra-index-url https://download.pytorch.org/whl/cu126
+
 requests
 python-dotenv
 openai
 langchain-core
 langchain-text-splitters
+torch
 sentence-transformers
 pymilvus
 

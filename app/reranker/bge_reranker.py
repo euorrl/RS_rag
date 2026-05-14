@@ -1,4 +1,7 @@
+import os
 from numbers import Real
+
+from dotenv import load_dotenv
 
 from app.reranker.reranker_base import BaseReranker
 from app.schemas import RetrievedChunk
@@ -20,6 +23,68 @@ def _get_cross_encoder():
     return CrossEncoder
 
 
+def _cuda_total_memory_gb() -> float | None:
+    """返回当前 CUDA 设备显存大小；无法检测时返回 None。"""
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return None
+
+        device_index = torch.cuda.current_device()
+        total_bytes = torch.cuda.get_device_properties(device_index).total_memory
+        return total_bytes / (1024**3)
+    except Exception:
+        return None
+
+
+def _has_cuda_device() -> bool:
+    """判断当前 PyTorch 环境是否可用 CUDA。"""
+    try:
+        import torch
+
+        return bool(torch.cuda.is_available())
+    except Exception:
+        return False
+
+
+def _resolve_batch_size(device: str | None, batch_size: int | None) -> int:
+    """解析 rerank batch_size，优先级为显式参数、环境变量、硬件默认值。"""
+    if batch_size is not None:
+        resolved_batch_size = batch_size
+    elif os.getenv("RERANK_BATCH_SIZE"):
+        resolved_batch_size = int(os.environ["RERANK_BATCH_SIZE"])
+    else:
+        resolved_batch_size = _default_batch_size_for_device(device)
+
+    if resolved_batch_size <= 0:
+        raise ValueError("batch_size must be greater than 0")
+
+    return resolved_batch_size
+
+
+def _default_batch_size_for_device(device: str | None) -> int:
+    """根据推理设备和显存给出保守默认 batch_size。"""
+    normalized_device = (device or "").lower()
+    use_cuda = normalized_device.startswith("cuda") or (
+        device is None and _has_cuda_device()
+    )
+
+    if not use_cuda:
+        return 32
+
+    total_memory_gb = _cuda_total_memory_gb()
+    if total_memory_gb is None:
+        return 16
+    if total_memory_gb <= 4:
+        return 8
+    if total_memory_gb <= 8:
+        return 16
+    if total_memory_gb <= 12:
+        return 32
+    return 64
+
+
 class BGEReranker(BaseReranker):
     """基于 BGE reranker 的二阶段重排序器。
 
@@ -29,25 +94,41 @@ class BGEReranker(BaseReranker):
 
     Attributes:
         model_name (str): 使用的 BGE reranker 模型名称。
+        device (str | None): 模型推理设备，例如 "cuda" 或 "cpu"。
+        batch_size (int): rerank 推理时每批处理的文本对数量。
         model: SentenceTransformers CrossEncoder 实例。
     """
 
     def __init__(
         self,
         model_name: str = "BAAI/bge-reranker-v2-m3",
+        device: str | None = None,
+        batch_size: int | None = None,
     ) -> None:
         """初始化 BGEReranker。
 
         Args:
             model_name (str): 使用的 reranker 模型名称。
+            device (str | None): 模型推理设备。默认从 RERANKER_DEVICE 环境变量读取；
+                未设置时交给 sentence-transformers 自动选择。
+            batch_size (int | None): rerank 推理批大小。默认从 RERANK_BATCH_SIZE
+                环境变量读取；未设置时根据当前 CUDA 可用性和显存自动选择。CPU 默认
+                使用 32；6GB 级别 CUDA 显卡默认使用 16。
 
         Raises:
+            ValueError: batch_size 小于等于 0 时抛出。
             RuntimeError: 模型加载失败时抛出。
         """
+        load_dotenv()
         self.model_name = model_name
+        self.device = device or os.getenv("RERANKER_DEVICE") or None
+        self.batch_size = _resolve_batch_size(self.device, batch_size)
 
         try:
-            self.model = _get_cross_encoder()(model_name)
+            model_kwargs = {}
+            if self.device is not None:
+                model_kwargs["device"] = self.device
+            self.model = _get_cross_encoder()(model_name, **model_kwargs)
         except Exception as exc:
             raise RuntimeError(f"BGE reranker 模型加载失败: {model_name}") from exc
 
@@ -118,7 +199,11 @@ class BGEReranker(BaseReranker):
         # 构造 pair 并执行 rerank
         # =========================
         pairs = [[query, candidate.text] for candidate in candidates]
-        scores = self.model.predict(pairs)
+        scores = self.model.predict(
+            pairs,
+            batch_size=self.batch_size,
+            device=self.device,
+        )
 
         if hasattr(scores, "tolist"):
             scores = scores.tolist()

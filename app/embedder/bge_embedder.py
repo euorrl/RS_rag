@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
 from app.embedder.embedder_base import BaseEmbedder
@@ -39,6 +40,7 @@ class BGEEmbedder(BaseEmbedder):
         self.use_instruction = use_instruction
 
         try:
+            load_dotenv()
             self.model = SentenceTransformer(model_name)
         except Exception as exc:
             raise RuntimeError(f"BGE 模型加载失败: {model_name}") from exc
