@@ -16,6 +16,10 @@ htmlcov/
 # 环境变量
 .env
 
+# 本地/云端 Milvus 数据库创建脚本
+scripts/create_cloud_milvus_database.py
+scripts/copy_local_milvus_to_cloud.py
+
 # data (不上传真实数据但保留说明文件)
 data/*
 !data/README.md

@@ -523,3 +523,46 @@ def test_pipeline_factory_dependencies_are_created_only_once(monkeypatch):
         "prompt_builder": 1,
         "generator": 1,
     }
+
+
+def test_pipeline_passes_explicit_vector_store_connection_kwargs(monkeypatch):
+    """验证 Pipeline 会把显式向量库连接参数传给 VectorStore。"""
+    calls = {}
+
+    def fake_get_embedder(provider="bge", **kwargs):
+        return object()
+
+    def fake_get_vector_store(provider="milvus", **kwargs):
+        calls["provider"] = provider
+        calls["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setattr("app.pipeline.rag_pipeline.get_embedder", fake_get_embedder)
+    monkeypatch.setattr(
+        "app.pipeline.rag_pipeline.get_vector_store",
+        fake_get_vector_store,
+    )
+    monkeypatch.setattr(
+        "app.pipeline.rag_pipeline.get_recaller",
+        lambda provider="vector", **kwargs: FakeRecaller(),
+    )
+
+    RAGPipeline(
+        collection_name="demo_chunks",
+        host="127.0.0.1",
+        port="19530",
+        dimension=2,
+        reranker=FakeReranker(),
+        prompt_builder=FakePromptBuilder(),
+        generator=FakeGenerator(),
+    )
+
+    assert calls == {
+        "provider": "milvus",
+        "kwargs": {
+            "collection_name": "demo_chunks",
+            "host": "127.0.0.1",
+            "port": "19530",
+            "dimension": 2,
+        },
+    }

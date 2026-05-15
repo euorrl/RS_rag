@@ -14,6 +14,10 @@ def make_store(dimension: int = 2) -> MilvusVectorStore:
     store.collection_name = "test_chunks"
     store.host = "localhost"
     store.port = "19530"
+    store.uri = "http://localhost:19530"
+    store.token = ""
+    store.db_name = "default"
+    store.mode = "local"
     store.dimension = dimension
     return store
 
@@ -38,6 +42,15 @@ def test_milvus_store_initializes_connection(monkeypatch):
     def fake_connect(**kwargs):
         calls.append(kwargs)
 
+    monkeypatch.setattr("app.vector_store.milvus_store.load_dotenv", lambda: None)
+    for env_name in [
+        "MILVUS_MODE",
+        "MILVUS_URI",
+        "MILVUS_TOKEN",
+        "MILVUS_DB_NAME",
+        "MILVUS_COLLECTION_NAME",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setattr(
         "app.vector_store.milvus_store.connections.connect",
         fake_connect,
@@ -53,12 +66,115 @@ def test_milvus_store_initializes_connection(monkeypatch):
     assert store.collection_name == "demo"
     assert store.host == "127.0.0.1"
     assert store.port == "19530"
+    assert store.uri == "http://127.0.0.1:19530"
+    assert store.token == ""
+    assert store.db_name == "default"
+    assert store.mode == "local"
     assert store.dimension == 2
     assert calls == [
         {
             "alias": "default",
-            "host": "127.0.0.1",
-            "port": "19530",
+            "uri": "http://127.0.0.1:19530",
+            "db_name": "default",
+        }
+    ]
+
+
+def test_milvus_store_reads_cloud_connection_from_env(monkeypatch):
+    """验证云端连接参数会从环境变量读取，并在 token 存在时传入。"""
+    calls = []
+
+    monkeypatch.setattr("app.vector_store.milvus_store.load_dotenv", lambda: None)
+    monkeypatch.setenv("MILVUS_MODE", "cloud")
+    monkeypatch.setenv("MILVUS_URI", "https://example.zillizcloud.com.cn")
+    monkeypatch.setenv("MILVUS_TOKEN", "secret-token")
+    monkeypatch.setenv("MILVUS_DB_NAME", "default")
+    monkeypatch.setenv("MILVUS_COLLECTION_NAME", "rag_chunks")
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.connections.connect",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    store = MilvusVectorStore(dimension=2)
+
+    assert store.mode == "cloud"
+    assert store.uri == "https://example.zillizcloud.com.cn"
+    assert store.token == "secret-token"
+    assert store.db_name == "default"
+    assert store.collection_name == "rag_chunks"
+    assert calls == [
+        {
+            "alias": "default",
+            "uri": "https://example.zillizcloud.com.cn",
+            "db_name": "default",
+            "token": "secret-token",
+        }
+    ]
+
+
+def test_milvus_store_uses_default_env_values_without_token(monkeypatch):
+    """验证未配置环境变量时使用本地默认值，且不会传入空 token。"""
+    calls = []
+
+    monkeypatch.setattr("app.vector_store.milvus_store.load_dotenv", lambda: None)
+    for env_name in [
+        "MILVUS_MODE",
+        "MILVUS_URI",
+        "MILVUS_TOKEN",
+        "MILVUS_DB_NAME",
+        "MILVUS_COLLECTION_NAME",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.connections.connect",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    store = MilvusVectorStore(dimension=2)
+
+    assert store.mode == "local"
+    assert store.uri == "http://localhost:19530"
+    assert store.token == ""
+    assert store.db_name == "default"
+    assert store.collection_name == "rag_chunks"
+    assert calls == [
+        {
+            "alias": "default",
+            "uri": "http://localhost:19530",
+            "db_name": "default",
+        }
+    ]
+
+
+def test_milvus_store_keeps_legacy_http_host_as_uri(monkeypatch):
+    """验证旧版 host 已包含协议时会直接作为 URI 使用。"""
+    calls = []
+
+    monkeypatch.setattr("app.vector_store.milvus_store.load_dotenv", lambda: None)
+    for env_name in [
+        "MILVUS_MODE",
+        "MILVUS_URI",
+        "MILVUS_TOKEN",
+        "MILVUS_DB_NAME",
+        "MILVUS_COLLECTION_NAME",
+    ]:
+        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.setattr(
+        "app.vector_store.milvus_store.connections.connect",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    store = MilvusVectorStore(
+        host="https://example.zillizcloud.com.cn",
+        dimension=2,
+    )
+
+    assert store.uri == "https://example.zillizcloud.com.cn"
+    assert calls == [
+        {
+            "alias": "default",
+            "uri": "https://example.zillizcloud.com.cn",
+            "db_name": "default",
         }
     ]
 

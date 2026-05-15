@@ -15,8 +15,9 @@ def get_vector_store(
             - "milvus"
         **kwargs: 传递给具体 VectorStore 的初始化参数，例如：
             - collection_name (str): collection 名称
-            - host (str): 向量数据库服务地址
-            - port (str): 向量数据库服务端口
+            - uri (str): Milvus/Zilliz Cloud 连接地址
+            - token (str): Milvus/Zilliz Cloud 令牌
+            - db_name (str): Milvus 数据库名称
             - dimension (int): 向量维度
 
     Returns:
@@ -59,8 +60,9 @@ def save_embedded_chunks(
         provider (str): 向量数据库类型，默认 "milvus"。
         **kwargs: 传递给具体 VectorStore 的初始化参数，例如：
             - collection_name (str): collection 名称
-            - host (str): 向量数据库服务地址
-            - port (str): 向量数据库服务端口
+            - uri (str): Milvus/Zilliz Cloud 连接地址
+            - token (str): Milvus/Zilliz Cloud 令牌
+            - db_name (str): Milvus 数据库名称
             - dimension (int): 向量维度
 
     Returns:

@@ -140,6 +140,21 @@ def test_cuda_total_memory_returns_none_when_torch_errors(monkeypatch):
     assert bge_reranker._cuda_total_memory_gb() is None
 
 
+def test_cuda_total_memory_returns_current_device_memory(monkeypatch):
+    """验证 CUDA 可用时会返回当前设备显存 GB 数。"""
+    fake_torch = ModuleType("torch")
+    fake_torch.cuda = SimpleNamespace(
+        is_available=lambda: True,
+        current_device=lambda: 1,
+        get_device_properties=lambda device_index: SimpleNamespace(
+            total_memory=8 * 1024**3,
+        ),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    assert bge_reranker._cuda_total_memory_gb() == 8
+
+
 def test_has_cuda_device_returns_false_when_torch_errors(monkeypatch):
     """验证 torch CUDA 检测失败时按无 CUDA 处理。"""
     fake_torch = ModuleType("torch")

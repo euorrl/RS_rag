@@ -41,9 +41,9 @@ class RAGPipeline:
         normalize_embeddings: bool = True,
         use_instruction: bool = False,
         vector_store_provider: str = "milvus",
-        collection_name: str = "rag_chunks",
-        host: str = "localhost",
-        port: str = "19530",
+        collection_name: str | None = None,
+        host: str | None = None,
+        port: str | None = None,
         dimension: int = 512,
         reranker_model_name: str = "BAAI/bge-reranker-base",
         prompt_system_prompt: str | None = None,
@@ -381,9 +381,9 @@ class RAGPipeline:
         self,
         vector_store: Any | None,
         provider: str,
-        collection_name: str,
-        host: str,
-        port: str,
+        collection_name: str | None,
+        host: str | None,
+        port: str | None,
         dimension: int,
         vector_store_kwargs: dict[str, Any] | None,
     ) -> Any:
@@ -392,11 +392,14 @@ class RAGPipeline:
             return vector_store
 
         kwargs = {
-            "collection_name": collection_name,
-            "host": host,
-            "port": port,
             "dimension": dimension,
         }
+        if collection_name is not None:
+            kwargs["collection_name"] = collection_name
+        if host is not None:
+            kwargs["host"] = host
+        if port is not None:
+            kwargs["port"] = port
         kwargs.update(vector_store_kwargs or {})
         return get_vector_store(provider=provider, **kwargs)
 

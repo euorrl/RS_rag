@@ -1,7 +1,9 @@
 import json
+import os
 from numbers import Real
 from typing import Any
 
+from dotenv import load_dotenv
 from pymilvus import (
     Collection,
     CollectionSchema,
@@ -13,6 +15,35 @@ from pymilvus import (
 
 from app.schemas import EmbeddedChunk, RetrievedChunk
 from app.vector_store.vector_store_base import BaseVectorStore
+
+DEFAULT_MILVUS_MODE = "local"
+DEFAULT_MILVUS_URI = "http://localhost:19530"
+DEFAULT_MILVUS_DB_NAME = "default"
+DEFAULT_MILVUS_COLLECTION_NAME = "rag_chunks"
+
+
+def _resolve_milvus_uri(
+    *,
+    host: str | None = None,
+    port: str | None = None,
+) -> str:
+    """根据旧版显式参数或环境变量解析 Milvus URI。
+
+    Args:
+        host: 可选的旧版 host 参数。
+        port: 可选的旧版 port 参数。
+
+    Returns:
+        Milvus 连接 URI。
+    """
+    if host or port:
+        host_value = host or "localhost"
+        port_value = port or "19530"
+        if host_value.startswith(("http://", "https://")):
+            return host_value if port is None else f"{host_value}:{port_value}"
+        return f"http://{host_value}:{port_value}"
+
+    return os.getenv("MILVUS_URI", DEFAULT_MILVUS_URI)
 
 
 class MilvusVectorStore(BaseVectorStore):
@@ -26,17 +57,28 @@ class MilvusVectorStore(BaseVectorStore):
 
     def __init__(
         self,
-        collection_name: str = "rag_chunks",
-        host: str = "localhost",
-        port: str = "19530",
+        collection_name: str | None = None,
+        host: str | None = None,
+        port: str | None = None,
+        uri: str | None = None,
+        token: str | None = None,
+        db_name: str | None = None,
+        mode: str | None = None,
         dimension: int = 512,
     ) -> None:
         """初始化 MilvusVectorStore 并建立 Milvus 连接。
 
         Args:
-            collection_name: Milvus collection 名称。
-            host: Milvus 服务地址。
-            port: Milvus 服务端口。
+            collection_name: Milvus collection 名称，默认读取
+                ``MILVUS_COLLECTION_NAME``。
+            host: 兼容旧调用的 Milvus 主机名。优先使用 ``uri`` 或
+                ``MILVUS_URI``。
+            port: 兼容旧调用的 Milvus 端口。优先使用 ``uri`` 或
+                ``MILVUS_URI``。
+            uri: Milvus/Zilliz Cloud 连接地址，默认读取 ``MILVUS_URI``。
+            token: Zilliz Cloud 或远程 Milvus 令牌，默认读取 ``MILVUS_TOKEN``。
+            db_name: Milvus 数据库名称，默认读取 ``MILVUS_DB_NAME``。
+            mode: Milvus 模式标识，默认读取 ``MILVUS_MODE``。
             dimension: 向量维度，必须与 embedding 模型输出维度一致。
 
         Raises:
@@ -45,16 +87,29 @@ class MilvusVectorStore(BaseVectorStore):
         if dimension <= 0:
             raise ValueError("dimension 必须大于 0")
 
-        self.collection_name = collection_name
+        load_dotenv()
+
+        self.mode = mode or os.getenv("MILVUS_MODE", DEFAULT_MILVUS_MODE)
+        self.uri = uri or _resolve_milvus_uri(host=host, port=port)
+        self.token = token if token is not None else os.getenv("MILVUS_TOKEN", "")
+        self.db_name = db_name or os.getenv("MILVUS_DB_NAME", DEFAULT_MILVUS_DB_NAME)
+        self.collection_name = collection_name or os.getenv(
+            "MILVUS_COLLECTION_NAME",
+            DEFAULT_MILVUS_COLLECTION_NAME,
+        )
         self.host = host
         self.port = port
         self.dimension = dimension
 
-        connections.connect(
-            alias="default",
-            host=self.host,
-            port=self.port,
-        )
+        connect_kwargs = {
+            "alias": "default",
+            "uri": self.uri,
+            "db_name": self.db_name,
+        }
+        if self.token.strip():
+            connect_kwargs["token"] = self.token
+
+        connections.connect(**connect_kwargs)
 
     def create_collection(self) -> None:
         """创建 Milvus collection 和向量索引。"""
