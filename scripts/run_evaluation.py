@@ -12,6 +12,9 @@ from evaluation.pipeline import (  # noqa: E402
     run_retrieval_pipeline,
 )
 
+DATASET_PATH = Path("evaluation/dataset/eval_dataset.json")
+RESULT_PATH = Path("evaluation/results/evaluation_result.json")
+
 
 def summarize_generation_result(result: dict[str, Any]) -> dict[str, Any]:
     """压缩 generation evaluation 输出，只保留核心指标。"""
@@ -32,16 +35,26 @@ def summarize_generation_result(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
+    """运行检索和生成评估，并将结果覆盖写入 JSON 文件。"""
     retrieval_result = run_retrieval_pipeline(
-        dataset_path="evaluation/dataset/test.json",
+        dataset_path=DATASET_PATH,
     )
-    print(json.dumps(retrieval_result, ensure_ascii=False, indent=2))
 
     generation_result = run_generation_pipeline(
-        dataset_path="evaluation/dataset/test.json",
+        dataset_path=DATASET_PATH,
     )
-    summary = summarize_generation_result(generation_result)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    result = {
+        "dataset_path": str(DATASET_PATH),
+        "retrieval": retrieval_result,
+        "generation": summarize_generation_result(generation_result),
+    }
+
+    RESULT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    RESULT_PATH.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"评估结果已写入：{RESULT_PATH}")
 
 
 if __name__ == "__main__":

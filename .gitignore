@@ -23,3 +23,4 @@ scripts/copy_local_milvus_to_cloud.py
 # data (不上传真实数据但保留说明文件)
 data/*
 !data/README.md
+
