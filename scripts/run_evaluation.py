@@ -3,11 +3,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from evaluation.pipeline import run_retrieval_pipeline, run_generation_pipeline
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+from evaluation.pipeline import (  # noqa: E402
+    run_generation_pipeline,
+    run_retrieval_pipeline,
+)
 
 
 def summarize_generation_result(result: dict[str, Any]) -> dict[str, Any]:
