@@ -1,7 +1,10 @@
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 
 from app.embedder.embedder_base import BaseEmbedder
+
+load_dotenv()
+
+from sentence_transformers import SentenceTransformer  # noqa: E402
 
 
 class SentenceTransformerEmbedder(BaseEmbedder):
@@ -34,7 +37,6 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         self.normalize_embeddings = normalize_embeddings
 
         try:
-            load_dotenv()
             self.model = SentenceTransformer(model_name)
         except Exception as exc:
             raise RuntimeError(f"模型加载失败: {model_name}") from exc
