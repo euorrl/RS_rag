@@ -24,3 +24,5 @@ scripts/copy_local_milvus_to_cloud.py
 data/*
 !data/README.md
 
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
