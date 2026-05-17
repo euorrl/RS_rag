@@ -1,25 +1,26 @@
 # runtime
 --extra-index-url https://download.pytorch.org/whl/cu126
 
-requests
-python-dotenv
-openai
-langchain-core
-langchain-text-splitters
-torch
-sentence-transformers
-pymilvus
-fastapi
-uvicorn
+requests==2.33.1
+python-dotenv==1.2.2
+openai==2.36.0
+langchain-core==1.3.2
+langchain-text-splitters==1.1.2
+torch==2.11.0
+transformers==5.7.0
+sentence-transformers==5.4.1
+pymilvus==2.6.12
+fastapi==0.136.1
+uvicorn==0.47.0
 
 # docs
-mkdocs
-mkdocs-material
+mkdocs==1.6.1
+mkdocs-material==9.7.6
 
 # testing
-pytest
-pytest-cov
+pytest==9.0.3
+pytest-cov==7.1.0
 
 # dev tools
-black
-flake8
+black==26.3.1
+flake8==7.3.0
