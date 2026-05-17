@@ -9,6 +9,8 @@ langchain-text-splitters
 torch
 sentence-transformers
 pymilvus
+fastapi
+uvicorn
 
 # docs
 mkdocs
