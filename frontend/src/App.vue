@@ -210,7 +210,7 @@ function handleKeydown(event) {
         <p class="eyebrow">RS RAG</p>
         <h1>遥感知识问答</h1>
         <p class="summary">
-          连接后端 RAG 服务，按会话保存上下文，并以流式方式返回答案。
+          连接后端 RAG 服务，按会话保存上下文。
         </p>
       </div>
 
