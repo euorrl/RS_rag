@@ -1,11 +1,27 @@
 site_name: RS RAG Docs
-site_description: 遥感考研助手 RAG 项目文档
+site_description: 遥感学习资料 RAG 问答项目文档
 site_author: Hu Peng
 
 theme:
   name: material
   language: zh
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
 
 nav:
   - 首页: index.md
-  - Reader 模块: reader.md
+  - 快速开始: getting-started.md
+  - 系统架构: architecture.md
+  - 模块说明: modules.md
+  - 后端 API: api.md
+  - 评估: evaluation.md
+  - 开发与部署: development.md
