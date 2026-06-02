@@ -84,7 +84,7 @@ MINERU_API_TOKEN
 5. 提取 `full.md`。
 6. 构造成 `Document`。
 
-PDF 默认开启 OCR、公式识别和表格识别；图片默认开启 OCR 和表格识别，不开启公式识别。
+PDF 默认开启 OCR、公式识别和表格识别；图片默认开启 OCR 和表格识别。
 
 ### 扩展 Reader
 
@@ -479,6 +479,20 @@ max_turns=5
 位置：`app/pipeline/`
 
 `RAGPipeline` 是在线问答总编排。
+
+## 工作流程图
+
+```mermaid
+flowchart TD
+    A[用户输入 query] --> B[rewrite_query]
+    B --> C[retrieve]
+    C --> D[build_prompt]
+    D --> E[stream_generate]
+    E --> F[保存到 ChatMemory]
+    F --> G[返回 answer]
+```
+
+上图只展示 pipeline 层的模块级流程。`retrieve()` 内部会继续调用 recaller 和 reranker；`stream_generate()` 内部由 generator 调用模型接口。
 
 默认配置摘要：
 

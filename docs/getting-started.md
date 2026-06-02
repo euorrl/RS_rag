@@ -71,7 +71,7 @@ data/remote_sensing_fundamentals/*.pdf
 python scripts/create_cloud_milvus_database.py
 ```
 
-该脚本会删除并重建当前配置指向的 collection，然后解析 PDF、切分 Markdown、生成 embedding 并写入 Milvus。
+该脚本会 **删除并重建** 当前配置指向的 collection，然后解析 PDF、切分 Markdown、生成 embedding 并写入 Milvus。
 
 ## 启动服务
 

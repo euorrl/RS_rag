@@ -73,8 +73,7 @@ Read the Docs 配置文件为 `.readthedocs.yaml`。
 
 ## 注意事项
 
-- `.env` 包含密钥和云端连接信息，必须保持在 `.gitignore` 中。
 - `scripts/create_cloud_milvus_database.py` 会清空并重建当前 collection。
 - `scripts/copy_local_milvus_to_cloud.py` 会重建目标 collection。
 - BGE embedding 和 reranker 首次运行会加载模型，耗时和显存取决于环境。
-- MinerU 解析 PDF 或图片需要有效的 `MINERU_API_TOKEN`。
+- MinerU 解析、LLM功能需要有效的API_TOKEN`。

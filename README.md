@@ -1,10 +1,18 @@
 # RS RAG
 
-RS RAG 是一个面向遥感学习资料的 RAG 问答项目，包含文档解析、切分、向量化、Milvus 检索、BGE 重排、OpenAI 兼容模型生成，以及 FastAPI + Vue 的流式聊天界面。
+RS RAG 是一个面向遥感学习资料的 RAG 问答项目，包含文档解析、切分、向量化、Milvus 检索、BGE 重排、OpenAI 兼容模型生成，以及 FastAPI + Vue 的聊天界面。
 
 详细架构、模块说明、API、评估和部署文档请看 `docs/`，或通过 MkDocs / Read the Docs 构建后的文档站阅读。
 
-## 快速启动
+快速访问: https://rs-rag.vercel.app/
+
+项目详细文档: https://rs-rag.readthedocs.io/zh-cn/latest/
+
+数据库资料来源: https://zh.z-lib.fm/book/dAKJkEV7g7/%E9%81%A5%E6%84%9F%E5%AF%BC%E8%AE%BA.html
+
+> 注意: 本项目的后端模型服务不会长期在线(抱歉🙃)，如果无法访问或需要体验，欢迎联系Email-a1913397362@163.com
+
+## 本地启动
 
 ```bash
 python -m venv .venv
@@ -37,6 +45,11 @@ python scripts/check_milvus_connection.py
 
 ```bash
 python scripts/create_cloud_milvus_database.py
+```
+
+终端体验：
+```bash
+python scripts/run_rag_chat.py
 ```
 
 启动后端：
