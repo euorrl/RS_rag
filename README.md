@@ -4,7 +4,7 @@ RS RAG 是一个面向遥感学习资料的 RAG 问答项目，包含文档解�
 
 详细架构、模块说明、API、评估和部署文档请看 `docs/`，或通过 MkDocs / Read the Docs 构建后的文档站阅读。
 
-快速访问: https://rs-rag.vercel.app/
+快速访问: https://rs-rag.vercel.app/ （需要访问外网）
 
 项目详细文档: https://rs-rag.readthedocs.io/zh-cn/latest/
 
